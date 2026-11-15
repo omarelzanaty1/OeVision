@@ -4,9 +4,9 @@ let PROJ = [], PSTATE = "idle";
 async function loadProjects() {
   PSTATE = "loading";
   if (!window.sb) { PSTATE = "error"; return; }
-  const { data, error } = await window.sb.from("projects").select("*").eq("status", "published").order("created_at", { ascending: false });
+  const { data, error } = await window.sb.from("projects").select("*").eq("is_published", true).order("display_order", { ascending: true }).order("created_at", { ascending: false });
   if (error) { PSTATE = "error"; return; }
-  PROJ = data.map(r => ({ id: r.id, title: { ar: r.title_ar, en: r.title_en }, description: { ar: r.description_ar, en: r.description_en }, category: r.category, cover: r.cover_url || (r.images || [])[0] || "", images: r.images || [], year: r.year || "", tools: r.tools || [], url: r.preview_url }));
+  PROJ = data.map(r => ({ id: r.id, title: { ar: r.title_ar, en: r.title_en }, description: { ar: r.description_ar, en: r.description_en }, category: r.category, cover: r.cover_image || (r.gallery_images || [])[0] || "", images: r.gallery_images || [], year: r.year || "", tools: r.tools || [], url: r.project_url }));
   PSTATE = "ready";
 }
 let lang = "ar";
@@ -60,7 +60,7 @@ const SERVICES = {
     q("deadline", "text", 0, "الموعد المطلوب", "Deadline")] }
 };
 const STAT = { new: ["طلب جديد", "New Request"], reviewing: ["قيد المراجعة", "Reviewing"], in_progress: ["قيد التنفيذ", "In Progress"], completed: ["مكتمل", "Completed"], rejected: ["مرفوض", "Rejected"] };
-let USER = null, ACC = null; const sb = window.sb;
+let USER = null, ACC = null; const sb = window.sb; const BUCKET = "client-attachments";
 let B = { svc: null, step: 0, ans: {}, files: {}, err: "" };
 
 /* ---------- Views ---------- */
@@ -99,7 +99,7 @@ const views = {
   brief() {
     const steps = `<div class="steps">${[0, 1, 2].map(i => `<i class="${i <= B.step ? "on" : ""}"></i>`).join("")}</div>`;
     if (B.step === 0) return `<div class="wrap"><h2>Project Brief</h2>${steps}<p class="mu" style="margin-bottom:20px">${L("اختر نوع الخدمة لنبدأ. سيُطلب منك تسجيل الدخول لإرسال الطلب.", "Choose a service to begin. You'll be asked to sign in to submit your request.")}</p><div class="grid">${Object.entries(SERVICES).map(([k, s]) => `<button class="card" data-svc="${k}" style="padding:28px;font:inherit;color:inherit;text-align:start;cursor:pointer"><b style="font-size:20px">${P(s)}</b></button>`).join("")}</div></div>`;
-    if (B.step === 3) return `<div class="wrap"><div class="panel" style="text-align:center;max-width:560px;margin:auto;padding:40px 24px"><div class="ok">✓</div><h2>${L("تم استلام طلبك بنجاح", "Your request was received")}</h2><p class="mu">${L("شكرًا لك! سأراجع تفاصيل مشروعك وأتواصل معك قريبًا. يمكنك متابعة حالة الطلب من حسابك.", "Thank you! I'll review your project details and get back to you soon. You can follow the request status in your account.")}</p><div class="row" style="justify-content:center"><a class="btn" href="#/account">${L("طلباتي", "My requests")}</a><a class="btn gh" href="#/home">${L("الرئيسية", "Home")}</a></div></div></div>`;
+    if (B.step === 3) return `<div class="wrap"><div class="panel" style="text-align:center;max-width:560px;margin:auto;padding:40px 24px"><div class="ok">✓</div><h2>${L("تم استلام طلبك بنجاح", "Your request was received")}</h2><p class="mu">${L("شكرًا لك! سأراجع تفاصيل مشروعك وأتواصل معك قريبًا. يمكنك متابعة حالة الطلب من حسابك.", "Thank you! I'll review your project details and get back to you soon. You can follow the request status in your account.")}</p>${B.warn ? `<p class="err">${esc(B.warn)}</p>` : ""}<div class="row" style="justify-content:center"><a class="btn" href="#/account">${L("طلباتي", "My requests")}</a><a class="btn gh" href="#/home">${L("الرئيسية", "Home")}</a></div></div></div>`;
     const svc = SERVICES[B.svc];
     if (B.step === 1) return `<div class="wrap"><h2>${P(svc)}</h2>${steps}<form id="bf" novalidate>${svc.qs.map(f => field(f)).join("")}${B.err ? `<div class="err">${B.err}</div>` : ""}<div class="row"><button type="button" class="btn gh" data-act="back">${L("رجوع", "Back")}</button><button class="btn">${L("مراجعة الطلب", "Review")}</button></div></form></div>`;
     const sum = svc.qs.map(f => `<dt>${P(f)}</dt><dd>${esc(B.ans[f.id] || "—")}</dd>`).join("");
@@ -109,13 +109,13 @@ const views = {
   account() {
     if (!ACC) return `<div class="wrap"><div class="empty">…</div></div>`;
     const pr = ACC.profile || {}, d = x => new Date(x).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB");
-    const reqs = ACC.reqs.length ? ACC.reqs.map(r => `<details class="panel" style="margin-bottom:12px"><summary style="cursor:pointer;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>${esc(SERVICES[r.service] ? P(SERVICES[r.service]) : r.service)}</b><span class="mu">${d(r.created_at)}</span><span class="bd ${r.status}">${P(STAT[r.status])}</span></summary><dl style="margin-top:14px">${(r.answers || []).map(a => `<dt>${esc(P(a.q))}</dt><dd>${esc(a.a)}</dd>`).join("")}${(r.files || []).length ? `<dt>${L("الملفات المرفقة", "Attachments")}</dt><dd>${r.files.map(f => esc(f.name)).join("، ")}</dd>` : ""}</dl></details>`).join("") : `<div class="empty">${L("لا توجد طلبات بعد.", "No requests yet.")}</div>`;
+    const reqs = ACC.reqs.length ? ACC.reqs.map(r => `<details class="panel" style="margin-bottom:12px"><summary style="cursor:pointer;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>${esc(SERVICES[r.service_type] ? P(SERVICES[r.service_type]) : r.service_type)}</b><span class="mu">${d(r.created_at)}</span><span class="bd ${r.status}">${P(STAT[r.status])}</span></summary><dl style="margin-top:14px">${(r.brief_answers || []).map(a => `<dt>${esc(P(a.q))}</dt><dd>${esc(a.a)}</dd>`).join("")}${(r.request_attachments || []).length ? `<dt>${L("الملفات المرفقة", "Attachments")}</dt><dd>${r.request_attachments.map(f => esc(f.file_name)).join("، ")}</dd>` : ""}</dl></details>`).join("") : `<div class="empty">${L("لا توجد طلبات بعد.", "No requests yet.")}</div>`;
     return `<div class="wrap"><h2>${L("حسابي", "My Account")}</h2><form id="af" style="margin-bottom:32px"><div class="row" style="margin:0;align-items:center">${pr.avatar_url ? `<img src="${esc(pr.avatar_url)}" alt="" width="64" height="64" style="border-radius:50%" referrerpolicy="no-referrer">` : ""}<div><b>${esc(pr.email || USER.email)}</b><div class="mu" style="font-size:13px">${L("تاريخ التسجيل", "Member since")}: ${d(pr.created_at || USER.created_at)}</div></div></div><label>${L("الاسم", "Name")}<input name="n" value="${esc(pr.full_name)}"></label><div class="row" style="margin:0"><button class="btn">${L("حفظ", "Save")}</button><button type="button" class="btn gh" data-act="logout">${L("تسجيل الخروج", "Log out")}</button></div><div id="am" class="mu"></div></form><h2>${L("طلباتي", "My requests")}</h2>${reqs}</div>`;
   },
   contact() {
     const l = S.links, items = [["facebook", "Facebook", l.facebook], ["instagram", "Instagram", l.instagram], ["whatsapp", "WhatsApp", l.whatsapp], ["behance", "Behance", l.behance], ["email", "Email", l.email && "mailto:" + l.email]].filter(x => x[2]);
     return `<div class="wrap"><h2>${L("تواصل معي", "Contact")}</h2><div class="soc">${items.map(([k, n, h]) => `<a href="${esc(h)}" ${k === "email" ? "" : 'target="_blank" rel="noopener"'}>${ICON[k]}<span>${n}</span></a>`).join("")}</div>
-    <form id="cf"><label>${L("الاسم", "Name")} <span class="req">*</span><input name="n" required></label><label>${L("البريد الإلكتروني", "Email")} <span class="req">*</span><input name="e" type="email" required></label><label>${L("موضوع الرسالة", "Subject")}<input name="s"></label><label>${L("تفاصيل الطلب", "Details")} <span class="req">*</span><textarea name="d" required></textarea></label><div><button class="btn">${L("إرسال", "Send")}</button></div></form></div>`;
+    <form id="cf"><label>${L("الاسم", "Name")} <span class="req">*</span><input name="n" required></label><label>${L("البريد الإلكتروني", "Email")} <span class="req">*</span><input name="e" type="email" required></label><label>${L("موضوع الرسالة", "Subject")}<input name="s"></label><label>${L("تفاصيل الطلب", "Details")} <span class="req">*</span><textarea name="d" required></textarea></label><div id="cm" class="mu" role="status"></div><div><button class="btn">${L("إرسال", "Send")}</button></div></form></div>`;
   }
 };
 function field(f) {
@@ -161,13 +161,27 @@ document.addEventListener("click", e => {
 document.addEventListener("submit", e => {
   e.preventDefault();
   if (e.target.id === "bf") { if (collect(e.target)) { B.step = 2; B.err = ""; } else B.err = L("يرجى ملء الحقول الإلزامية.", "Please fill the required fields."); render(); }
-  if (e.target.id === "cf") { const d = new FormData(e.target); location.href = `mailto:${S.links.email}?subject=${encodeURIComponent(d.get("s") || "Contact")}&body=${encodeURIComponent(`${d.get("n")} <${d.get("e")}>\n\n${d.get("d")}`)}`; }
+  if (e.target.id === "cf") sendContact(e.target);
 });
 
+async function sendContact(form) {
+  const d = new FormData(form), m = form.querySelector("#cm"), btn = form.querySelector("button");
+  const name = String(d.get("n") || "").trim(), email = String(d.get("e") || "").trim(), subj = String(d.get("s") || "").trim(), body = String(d.get("d") || "").trim();
+  const message = subj ? `${subj}\n\n${body}` : body;
+  const show = (t, bad) => { m.className = bad ? "err" : "mu"; m.textContent = t; };
+  if (!sb) return show(L("خدمة الرسائل غير مهيأة بعد.", "Messaging is not configured yet."), 1);
+  if (!name || !email || !body) return show(L("يرجى ملء الحقول الإلزامية.", "Please fill the required fields."), 1);
+  if (name.length > 120 || message.length > 5000) return show(L("النص أطول من المسموح.", "The text is too long."), 1);
+  btn.disabled = true;
+  const { error } = await sb.from("contact_messages").insert({ user_id: USER ? USER.id : null, name, email, message });
+  btn.disabled = false;
+  if (error) return show(L("تعذّر إرسال الرسالة. حاول مرة أخرى.", "Could not send your message. Please try again."), 1);
+  form.reset(); show(L("تم إرسال رسالتك. شكرًا لك!", "Your message was sent. Thank you!"));
+}
 const base = () => location.origin + location.pathname;
 function applyPending() { let p = null; try { p = sessionStorage.getItem("pend"); sessionStorage.removeItem("pend"); } catch (e) {} if (location.search.includes("code=")) history.replaceState(null, "", base() + location.hash); if (p && SERVICES[p]) { B = { svc: p, step: 1, ans: {}, files: {}, err: "" }; location.hash = "#/brief"; } }
 async function loadAccount() {
-  const [pr, rq] = await Promise.all([sb.from("profiles").select("*").eq("id", USER.id).maybeSingle(), sb.from("requests").select("*").eq("user_id", USER.id).order("created_at", { ascending: false })]);
+  const [pr, rq] = await Promise.all([sb.from("profiles").select("*").eq("id", USER.id).maybeSingle(), sb.from("project_requests").select("*, request_attachments(file_name)").eq("user_id", USER.id).order("created_at", { ascending: false })]);
   ACC = { profile: pr.data, reqs: rq.data || [] };
   if (location.hash.startsWith("#/account")) app.innerHTML = views.account();
 }
@@ -198,15 +212,25 @@ function openAuth(svc) {
 async function submitBrief(btn) {
   const svc = SERVICES[B.svc]; btn.disabled = true;
   try {
-    const id = crypto.randomUUID(), files = [];
-    for (const [fid, fl] of Object.entries(B.files)) for (const f of fl) {
-      if (f.size > 10485760) throw new Error(L("حجم الملف يتجاوز 10MB: ", "File exceeds 10MB: ") + f.name);
-      const path = `${USER.id}/${id}/${crypto.randomUUID()}.${(f.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "")}`;
-      const { error } = await sb.storage.from("brief-files").upload(path, f, { contentType: f.type || "application/octet-stream" }); if (error) throw error;
-      files.push({ name: f.name, path, field: fid });
-    }
+    if (!sb || !USER) throw new Error(L("سجّل الدخول أولًا.", "Please sign in first."));
+    const list = Object.values(B.files).flat();
+    if (list.length > 10) throw new Error(L("الحد الأقصى 10 ملفات لكل طلب.", "Maximum 10 files per request."));
+    for (const f of list) if (f.size > 10485760) throw new Error(L("حجم الملف يتجاوز 10MB: ", "File exceeds 10MB: ") + f.name);
+    const id = crypto.randomUUID();
     const answers = svc.qs.filter(f => f.type !== "file" && B.ans[f.id]).map(f => ({ id: f.id, q: { ar: f.ar, en: f.en }, a: B.ans[f.id] }));
-    const { error } = await sb.from("requests").insert({ id, user_id: USER.id, service: B.svc, lang, answers, files }); if (error) throw error;
+    const projectName = String(B.ans.brand || B.ans.name || "").slice(0, 200) || null;
+    /* 1) create the request first */
+    const { error } = await sb.from("project_requests").insert({ id, user_id: USER.id, service_type: B.svc, project_name: projectName, brief_answers: answers }); if (error) throw error;
+    /* 2) then upload attachments to <user_id>/<request_id>/... and link them */
+    const failed = [];
+    for (const f of list) {
+      const path = `${USER.id}/${id}/${crypto.randomUUID()}.${(f.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin"}`;
+      const up = await sb.storage.from(BUCKET).upload(path, f, { contentType: f.type || "application/octet-stream" });
+      if (up.error) { failed.push(f.name); continue; }
+      const ins = await sb.from("request_attachments").insert({ request_id: id, user_id: USER.id, file_name: f.name.slice(0, 255), file_path: path, file_type: f.type ? f.type.slice(0, 150) : null, file_size: f.size });
+      if (ins.error) { failed.push(f.name); await sb.storage.from(BUCKET).remove([path]); }
+    }
+    B.warn = failed.length ? L("تم استلام الطلب لكن تعذّر رفع بعض الملفات: ", "Your request was received, but some files could not be uploaded: ") + failed.join(", ") : "";
     B.step = 3; render();
   } catch (e) { B.err = L("تعذّر إرسال الطلب: ", "Could not send the request: ") + (e.message || e); render(); }
 }
