@@ -10,11 +10,11 @@ async function start() {
   const { data, error } = await sb.rpc("is_admin");
   if (error) return deniedView("تعذّر التحقق من الصلاحيات.");
   if (data !== true) return deniedView("هذا الحساب ليس حساب مدير.");
-  document.querySelector("#out").hidden = false; document.querySelector("#tabs").hidden = false; listView();
+  document.querySelector("#tabs").hidden = false; listView();
 }
 /* Non-admin (or unverifiable) session: show nothing of the dashboard and DO NOT sign the user out of the public site. */
 function deniedView(t) {
-  document.querySelector("#out").hidden = true; document.querySelector("#tabs").hidden = true;
+  document.querySelector("#tabs").hidden = true;
   app.innerHTML = `<div class="panel" style="max-width:420px;margin:40px auto;text-align:center"><h2>${esc(t)}</h2><div class="row" style="justify-content:center"><a class="btn or" href="index.html#/home">العودة للموقع</a><button class="btn gh" id="so">تسجيل الخروج</button></div></div>`;
   document.querySelector("#so").onclick = async () => { await sb.auth.signOut(); loginView(); };
 }
@@ -27,7 +27,7 @@ async function guard() {
   return true;
 }
 function loginView(e = "") {
-  document.querySelector("#out").hidden = true; document.querySelector("#tabs").hidden = true;
+  document.querySelector("#tabs").hidden = true;
   app.innerHTML = `<form id="lf" style="max-width:420px;margin:40px auto"><h2>تسجيل دخول المدير</h2><label>Email<input name="e" type="email" required autocomplete="username"></label><label>Password<input name="p" type="password" required autocomplete="current-password"></label>${e ? msg(e, 1) : ""}<button class="btn">دخول</button><a class="mu" href="index.html" style="font-size:13px">للدخول بحساب Google: سجّل الدخول من الموقع الرئيسي ثم افتح Dashboard من شريط التنقل.</a></form>`;
   document.querySelector("#lf").onsubmit = async ev => {
     ev.preventDefault(); const f = new FormData(ev.target);
@@ -35,7 +35,6 @@ function loginView(e = "") {
     error ? loginView("بيانات الدخول غير صحيحة.") : start();
   };
 }
-document.querySelector("#out").onclick = async () => { await sb.auth.signOut(); loginView(); };
 
 async function listView(note = "") {
   const { data, error } = await sb.from("projects").select("*").order("created_at", { ascending: false });
