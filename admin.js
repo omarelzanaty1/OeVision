@@ -15,7 +15,7 @@ async function start() {
 /* Non-admin (or unverifiable) session: show nothing of the dashboard and DO NOT sign the user out of the public site. */
 function deniedView(t) {
   document.querySelector("#out").hidden = true; document.querySelector("#tabs").hidden = true;
-  app.innerHTML = `<div class="panel" style="max-width:420px;margin:40px auto;text-align:center"><h2>${esc(t)}</h2><div class="row" style="justify-content:center"><a class="btn" href="index.html">العودة للموقع</a><button class="btn gh" id="so">تسجيل الخروج</button></div></div>`;
+  app.innerHTML = `<div class="panel" style="max-width:420px;margin:40px auto;text-align:center"><h2>${esc(t)}</h2><div class="row" style="justify-content:center"><a class="btn or" href="index.html#/home">العودة للموقع</a><button class="btn gh" id="so">تسجيل الخروج</button></div></div>`;
   document.querySelector("#so").onclick = async () => { await sb.auth.signOut(); loginView(); };
 }
 /* Re-verify the session and admin role (server side, via is_admin()) before every sensitive operation. RLS remains the real enforcement. */
