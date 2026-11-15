@@ -60,7 +60,7 @@ const SERVICES = {
     q("deadline", "text", 0, "الموعد المطلوب", "Deadline")] }
 };
 const STAT = { new: ["طلب جديد", "New Request"], reviewing: ["قيد المراجعة", "Reviewing"], in_progress: ["قيد التنفيذ", "In Progress"], completed: ["مكتمل", "Completed"], rejected: ["مرفوض", "Rejected"] };
-let USER = null, ACC = null; const sb = window.sb; const BUCKET = "client-attachments";
+let USER = null, ACC = null, ISADMIN = false; const sb = window.sb; const BUCKET = "client-attachments";
 let B = { svc: null, step: 0, ans: {}, files: {}, err: "" };
 
 /* ---------- Views ---------- */
@@ -129,12 +129,22 @@ function field(f) {
 const waText = svc => `${L("طلب جديد من الموقع", "New request from the website")}\n${L("الخدمة", "Service")}: ${P(svc)}\n` + svc.qs.filter(f => B.ans[f.id]).map(f => `${P(f)}: ${B.ans[f.id]}`).join("\n");
 
 /* ---------- Router ---------- */
+const NAV = [["home", "الرئيسية", "Home"], ["work", "الأعمال", "Work"], ["brief", "Project Brief", "Project Brief"], ["contact", "تواصل", "Contact"]];
+/* The Dashboard link is a convenience only: ISADMIN comes from the database function is_admin(); real protection is RLS + the checks in admin.js. */
+function drawMenu(r = (location.hash || "#/home").slice(2).split("/")[0] || "home", nav = NAV) {
+  $("#menu").innerHTML = nav.map(([k, a, e]) => `<a href="#/${k}" class="${r === k ? "on" : ""}">${L(a, e)}</a>`).join("") + (USER ? `<a href="#/account" class="${r === "account" ? "on" : ""}">${L("حسابي", "My Account")}</a>` : `<a href="#" data-login="1">${L("تسجيل الدخول", "Login")}</a>`) + (ISADMIN ? `<a href="admin.html">Dashboard</a>` : "");
+}
+async function checkAdmin() {
+  ISADMIN = false;
+  if (USER && sb) { const { data, error } = await sb.rpc("is_admin"); ISADMIN = !error && data === true; }
+  drawMenu();
+}
 function render() {
   const h = (location.hash || "#/home").slice(2).split("/"), r = h[0] || "home";
   document.documentElement.lang = lang; document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   $("#lang").textContent = lang === "ar" ? "EN" : "AR";
   const nav = [["home", "الرئيسية", "Home"], ["work", "الأعمال", "Work"], ["brief", "Project Brief", "Project Brief"], ["contact", "تواصل", "Contact"]];
-  $("#menu").innerHTML = nav.map(([k, a, e]) => `<a href="#/${k}" class="${r === k ? "on" : ""}">${L(a, e)}</a>`).join("") + (USER ? `<a href="#/account" class="${r === "account" ? "on" : ""}">${L("حسابي", "My Account")}</a>` : `<a href="#" data-login="1">${L("تسجيل الدخول", "Login")}</a>`);
+  drawMenu(r, nav);
   if (r === "work" && PSTATE === "idle") loadProjects().then(render);
   if (r === "account") { if (!USER) { app.innerHTML = `<div class="wrap"><div class="empty">${L("سجّل الدخول لعرض حسابك.", "Sign in to view your account.")}<div class="row" style="justify-content:center"><button class="btn" data-login="1">${L("تسجيل الدخول", "Login")}</button></div></div></div>`; return; } ACC = null; loadAccount(); }
   app.innerHTML = r === "account" ? views.account() : r === "work" && h[1] ? views.project(h[1]) : (views[r] || views.home)();
@@ -239,5 +249,5 @@ document.addEventListener("submit", async e => { if (e.target.id !== "af") retur
 $("#lang").onclick = () => { lang = lang === "ar" ? "en" : "ar"; try { localStorage.setItem("lang", lang); } catch (e) {} render(); };
 window.addEventListener("hashchange", render);
 $("#yr").textContent = new Date().getFullYear();
-if (sb) { let first = true, prev = null; sb.auth.onAuthStateChange((ev, session) => { const id = session?.user?.id || null; if (!first && id === prev) return; first = false; prev = id; USER = session?.user || null; if (USER) applyPending(); render(); }); } else render();
+if (sb) { let first = true, prev = null; sb.auth.onAuthStateChange((ev, session) => { const id = session?.user?.id || null; if (!first && id === prev) return; first = false; prev = id; USER = session?.user || null; if (USER) applyPending(); render(); checkAdmin(); }); } else render();
 })();

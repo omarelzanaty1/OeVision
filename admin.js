@@ -8,13 +8,27 @@ async function start() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return loginView();
   const { data, error } = await sb.rpc("is_admin");
-  if (error) { await sb.auth.signOut(); return loginView("تعذّر التحقق من الصلاحيات."); }
-  if (data !== true) { await sb.auth.signOut(); return loginView("هذا الحساب ليس حساب مدير."); }
+  if (error) return deniedView("تعذّر التحقق من الصلاحيات.");
+  if (data !== true) return deniedView("هذا الحساب ليس حساب مدير.");
   document.querySelector("#out").hidden = false; document.querySelector("#tabs").hidden = false; listView();
+}
+/* Non-admin (or unverifiable) session: show nothing of the dashboard and DO NOT sign the user out of the public site. */
+function deniedView(t) {
+  document.querySelector("#out").hidden = true; document.querySelector("#tabs").hidden = true;
+  app.innerHTML = `<div class="panel" style="max-width:420px;margin:40px auto;text-align:center"><h2>${esc(t)}</h2><div class="row" style="justify-content:center"><a class="btn" href="index.html">العودة للموقع</a><button class="btn gh" id="so">تسجيل الخروج</button></div></div>`;
+  document.querySelector("#so").onclick = async () => { await sb.auth.signOut(); loginView(); };
+}
+/* Re-verify the session and admin role (server side, via is_admin()) before every sensitive operation. RLS remains the real enforcement. */
+async function guard() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { loginView("انتهت الجلسة، سجّل الدخول مرة أخرى."); return false; }
+  const { data, error } = await sb.rpc("is_admin");
+  if (error || data !== true) { deniedView(error ? "تعذّر التحقق من الصلاحيات." : "هذا الحساب ليس حساب مدير."); return false; }
+  return true;
 }
 function loginView(e = "") {
   document.querySelector("#out").hidden = true; document.querySelector("#tabs").hidden = true;
-  app.innerHTML = `<form id="lf" style="max-width:420px;margin:40px auto"><h2>تسجيل دخول المدير</h2><label>Email<input name="e" type="email" required autocomplete="username"></label><label>Password<input name="p" type="password" required autocomplete="current-password"></label>${e ? msg(e, 1) : ""}<button class="btn">دخول</button></form>`;
+  app.innerHTML = `<form id="lf" style="max-width:420px;margin:40px auto"><h2>تسجيل دخول المدير</h2><label>Email<input name="e" type="email" required autocomplete="username"></label><label>Password<input name="p" type="password" required autocomplete="current-password"></label>${e ? msg(e, 1) : ""}<button class="btn">دخول</button><a class="mu" href="index.html" style="font-size:13px">للدخول بحساب Google: سجّل الدخول من الموقع الرئيسي ثم افتح Dashboard من شريط التنقل.</a></form>`;
   document.querySelector("#lf").onsubmit = async ev => {
     ev.preventDefault(); const f = new FormData(ev.target);
     const { error } = await sb.auth.signInWithPassword({ email: f.get("e"), password: f.get("p") });
@@ -35,8 +49,9 @@ async function listView(note = "") {
 app.addEventListener("click", async e => {
   const b = e.target.closest("[data-a]"); if (!b) return; const r = rows.find(x => x.id === b.dataset.id);
   if (b.dataset.a === "edit") formView(r);
-  if (b.dataset.a === "tog") { const { error } = await sb.from("projects").update({ is_published: !r.is_published }).eq("id", r.id); listView(error ? error.message : "تم التحديث."); }
+  if (b.dataset.a === "tog") { if (!await guard()) return; const { error } = await sb.from("projects").update({ is_published: !r.is_published }).eq("id", r.id); listView(error ? error.message : "تم التحديث."); }
   if (b.dataset.a === "del" && confirm("حذف المشروع نهائيًا مع صوره؟")) {
+    if (!await guard()) return;
     const paths = [r.cover_image, ...(r.gallery_images || [])].map(pathOf).filter(Boolean);
     const { error } = await sb.from("projects").delete().eq("id", r.id);
     if (!error && paths.length) await sb.storage.from(BUCKET).remove(paths);
@@ -76,7 +91,10 @@ function paint() {
     paint();
   });
 }
+const IMG_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 async function upload(file, id) {
+  if (!IMG_TYPES.includes(file.type)) throw new Error("نوع الصورة غير مسموح (JPEG/PNG/WebP/GIF فقط): " + file.name);
+  if (file.size > 8388608) throw new Error("حجم الصورة يتجاوز 8MB: " + file.name);
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
   const path = `${id}/${crypto.randomUUID()}.${ext}`;
   const { error } = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
@@ -88,6 +106,7 @@ async function save(ev) {
   if (!f.get("title_ar").trim() && !f.get("title_en").trim()) { fe.innerHTML = msg("أدخل اسم المشروع.", 1); return; }
   if (!cur.cover && !cur.coverFile) { fe.innerHTML = msg("صورة الغلاف مطلوبة.", 1); return; }
   btn.disabled = true; fe.innerHTML = msg("جارٍ الحفظ ورفع الصور…");
+  if (!await guard()) return;
   try {
     const id = cur.id || crypto.randomUUID(), oldCover = cur.coverFile ? cur.cover : null;
     const cover = cur.coverFile ? await upload(cur.coverFile, id) : cur.cover;
@@ -119,7 +138,7 @@ async function reqDetail(r) {
   <dt>الملفات المرفقة</dt><dd>${urls.length ? urls.map(u => `<a class="chip" target="_blank" rel="noopener" href="${esc(u.url || "#")}">${esc(u.name)}</a>`).join(" ") : "—"}</dd></dl>
   <label>حالة الطلب<select id="stt">${Object.entries(ST).map(([k, v]) => `<option value="${k}" ${r.status === k ? "selected" : ""}>${v}</option>`).join("")}</select></label><div id="sm"></div><div><button class="btn" id="ss">حفظ الحالة</button></div></div>`;
   document.querySelector("#bk").onclick = () => reqList();
-  document.querySelector("#ss").onclick = async () => { const { error } = await sb.from("project_requests").update({ status: document.querySelector("#stt").value }).eq("id", r.id); document.querySelector("#sm").innerHTML = msg(error ? error.message : "تم تحديث الحالة.", !!error); if (!error) r.status = document.querySelector("#stt").value; };
+  document.querySelector("#ss").onclick = async () => { if (!await guard()) return; const { error } = await sb.from("project_requests").update({ status: document.querySelector("#stt").value }).eq("id", r.id); document.querySelector("#sm").innerHTML = msg(error ? error.message : "تم تحديث الحالة.", !!error); if (!error) r.status = document.querySelector("#stt").value; };
 }
 start();
 })();
