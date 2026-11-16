@@ -8,7 +8,7 @@
 /* ===== Tokens — extracted from assets/logo.svg (orange #F79321, blue #0F72BA) ===== */
 :root{
   --bg:#0B0B0F; --s1:#101016; --s2:#16161E; --line:#232330; --line2:#34344A;
-  --tx:#F4F4F7; --mu:#9A9AAB; --mu2:#6C6C80;
+  --tx:#F4F4F7; --mu:#9A9AAB; --mu2:#8A8AA0;
   --or:#F79321; --or-d:#C9740F;            /* logo orange */
   --bl:#0F72BA; --bl-t:#4BA3E3;            /* logo blue; -t = lighter tint of the SAME hue, for small text on dark */
   --ok:#38D98A; --warn:#E6C200; --bad:#FF6B6B;
@@ -40,7 +40,7 @@ p.mu{color:var(--mu);max-width:60ch}
 .lang{font:700 12px Outfit;letter-spacing:.1em;color:var(--tx);border:1px solid var(--line2);border-radius:var(--r-s);padding:7px 12px;background:none;cursor:pointer;transition:.2s}
 .lang:hover{border-color:var(--or);color:var(--or)}
 .burger{display:none}
-@media(max-width:760px){.menu{display:none}.burger{display:flex;margin-inline-start:auto;border:1px solid var(--line2);border-radius:var(--r-s);background:none;color:var(--tx);width:38px;height:34px;align-items:center;justify-content:center}.nav .wrap{gap:12px}.lang{margin-inline-start:0}.brand span{display:none}}
+@media(max-width:760px){.menu{display:none}.menu.open{display:grid;position:absolute;inset-inline:0;top:64px;margin:0;background:var(--bg);border-bottom:1px solid var(--line2);padding:8px clamp(16px,4vw,48px) 16px;gap:0}.menu.open a{padding:14px 0;border-bottom:1px solid var(--line);font-size:16px;color:var(--tx)}.menu.open a.on::after{inset-inline:0;bottom:-1px}.menu.open a small{width:22px}.burger{display:flex;margin-inline-start:auto;border:1px solid var(--line2);border-radius:var(--r-s);background:none;color:var(--tx);width:38px;height:34px;align-items:center;justify-content:center}.nav .wrap{gap:12px}.lang{margin-inline-start:0}.brand span{display:none}}
 
 /* ===== Hero: asymmetric 12-col ===== */
 .hero{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(16px,2vw,32px);padding:clamp(32px,6vw,72px) 0;align-items:end}
@@ -50,20 +50,21 @@ p.mu{color:var(--mu);max-width:60ch}
 .hero .role{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center;border-top:1px solid var(--line);padding-top:18px}
 .hero .role span{font:600 13px Outfit;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}
 .hero .role span::before{content:"";display:inline-block;width:6px;height:6px;background:var(--or);margin-inline-end:10px;vertical-align:middle}
-.hero .ph{grid-column:8/13;position:relative;aspect-ratio:4/5;border:1px solid var(--line2);border-radius:var(--r-m);overflow:hidden;background:#000 url(../assets/banner.png) no-repeat;background-size:600% auto;background-position:47.5% 20%}
+.hero .ph{grid-column:8/13;position:relative;aspect-ratio:4/5;border:1px solid var(--line2);border-radius:var(--r-m);overflow:hidden;background:#000}
+.hero .pimg{position:absolute;inset:0;background:url(../assets/banner.png) no-repeat;background-size:500% auto;background-position:45.5% 31.6%;-webkit-mask-image:linear-gradient(90deg,transparent 8%,#000 24%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent 8%,#000 24%,#000 88%,transparent)}
 .hero .ph::before,.hero .ph::after{content:"";position:absolute;width:22px;height:22px;border:2px solid var(--or)}
 .hero .ph::before{inset-block-start:10px;inset-inline-start:10px;border-width:2px 0 0 2px}
 .hero .ph::after{inset-block-end:10px;inset-inline-end:10px;border-width:0 2px 2px 0}
 .hero .cap{position:absolute;inset-inline:0;bottom:0;padding:14px 16px;display:flex;justify-content:space-between;font:600 11px Outfit;letter-spacing:.12em;text-transform:uppercase;color:var(--tx);background:linear-gradient(transparent,#000a)}
 .cta{display:flex;gap:12px;flex-wrap:wrap}
-@media(max-width:860px){.hero{grid-template-columns:1fr}.hero .txt,.hero .ph{grid-column:1}.hero .ph{aspect-ratio:16/11;background-size:330% auto;background-position:47% 20%;order:-1}}
+@media(max-width:860px){.hero{grid-template-columns:1fr}.hero .txt,.hero .ph{grid-column:1}.hero .ph{aspect-ratio:4/5;order:-1;max-width:420px}}
 
 /* ===== Buttons ===== */
 .btn{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 20px;border-radius:var(--r-s);font:700 14px Cairo,Outfit;border:1px solid transparent;cursor:pointer;transition:transform .2s var(--ease),background .2s,border-color .2s,color .2s;white-space:nowrap}
 .btn svg{transition:transform .25s var(--ease)}
 .btn:hover svg{transform:translate(-2px,-2px)}[dir=rtl] .btn:hover svg.ar{transform:translate(2px,-2px)}
 .btn.p{background:var(--or);color:#0B0B0F}.btn.p:hover{background:#FFA13B}
-.btn.b{background:var(--bl);color:#fff}.btn.b:hover{background:#1384D4}
+.btn.b{background:var(--bl);color:#fff}.btn.b:hover{background:#0C62A0}
 .btn.g{background:none;border-color:var(--line2);color:var(--tx)}.btn.g:hover{border-color:var(--tx)}
 .btn.t{background:none;color:var(--mu);padding:0 8px}.btn.t:hover{color:var(--tx)}
 .btn.sm{height:34px;padding:0 14px;font-size:13px}
@@ -94,8 +95,8 @@ p.mu{color:var(--mu);max-width:60ch}
 @media(max-width:860px){.cell{grid-column:span 12}}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .fld{display:grid;gap:8px}.fld>span{font:600 12px Outfit,Cairo;letter-spacing:.06em;color:var(--mu)}.fld>span i{color:var(--or);font-style:normal}
-.in{width:100%;height:46px;background:var(--bg);color:var(--tx);border:1px solid var(--line2);border-radius:var(--r-s);padding:0 14px;font:inherit;transition:border-color .2s,box-shadow .2s}
-.in:hover{border-color:var(--mu2)}.in:focus{outline:0;border-color:var(--bl-t);box-shadow:0 0 0 3px #0F72BA44}
+.in{width:100%;height:46px;background:var(--bg);color:var(--tx);border:1px solid #6A6A82;border-radius:var(--r-s);padding:0 14px;font:inherit;transition:border-color .2s,box-shadow .2s}
+.in:hover{border-color:var(--mu)}.in:focus{outline:0;border-color:var(--bl-t);box-shadow:0 0 0 3px #0F72BA44}
 .in.bad{border-color:var(--bad)}.hint{font-size:12px;color:var(--bad)}
 textarea.in{height:96px;padding:12px 14px;resize:vertical}
 .chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border:1px solid var(--line2);border-radius:var(--r-s);font:600 12px Outfit,Cairo;color:var(--mu)}
@@ -145,8 +146,8 @@ textarea.in{height:96px;padding:12px 14px;resize:vertical}
 
 <header class="nav"><div class="wrap">
   <a class="brand" href="#"><img src="../assets/logo.svg" alt="O.E."><span>OMAR ELZANATY</span></a>
-  <nav class="menu en"><a class="on" href="#"><small>01</small>الرئيسية</a><a href="#"><small>02</small>الأعمال</a><a href="#"><small>03</small>Project Brief</a><a href="#"><small>04</small>تواصل</a><a href="#"><small>05</small>تسجيل الدخول</a></nav>
-  <button class="lang">EN</button>
+  <nav class="menu en"><a class="on" href="#"><small>01</small><span data-en="Home">الرئيسية</span></a><a href="#"><small>02</small><span data-en="Work">الأعمال</span></a><a href="#"><small>03</small>Project Brief</a><a href="#"><small>04</small><span data-en="Contact">تواصل</span></a><a href="#"><small>05</small><span data-en="Sign in">تسجيل الدخول</span></a></nav>
+  <button class="lang" id="lg">EN</button>
   <button class="burger" aria-label="Menu"><svg class="i"><use href="#menu"/></svg></button>
 </div></header>
 
@@ -156,9 +157,9 @@ textarea.in{height:96px;padding:12px 14px;resize:vertical}
     <span class="lbl">Visual Identity Designer &amp; Web Developer — Egypt</span>
     <h1>Omar<em>Elzanaty</em></h1>
     <div class="role"><span>Visual Identity</span><span>Web Development</span></div>
-    <div class="cta"><a class="btn p" href="#">الأعمال <svg class="i ar"><use href="#up"/></svg></a><a class="btn g" href="#">Project Brief</a></div>
+    <div class="cta"><a class="btn p" href="#"><span data-en="Work">الأعمال</span> <svg class="i ar"><use href="#up"/></svg></a><a class="btn g" href="#">Project Brief</a></div>
   </div>
-  <div class="ph" role="img" aria-label="Omar Elzanaty"><div class="cap"><span>O.E.</span><span>Cairo</span></div></div>
+  <div class="ph" role="img" aria-label="Omar Elzanaty"><div class="pimg"></div><div class="cap"><span>O.E.</span><span>Cairo</span></div></div>
 </div></section>
 
 <section class="sec"><div class="wrap">
@@ -231,4 +232,9 @@ textarea.in{height:96px;padding:12px 14px;resize:vertical}
 </div></section>
 </main>
 <footer class="foot"><div class="wrap">© 2026 Omar Elzanaty</div></footer>
-</body></html>
+<script>
+const bg=document.querySelector('.burger'),mn=document.querySelector('.menu');bg.onclick=()=>{const o=mn.classList.toggle('open');bg.setAttribute('aria-expanded',o)};
+const T=[...document.querySelectorAll('[data-en]')];T.forEach(e=>e.dataset.ar=e.textContent);
+document.getElementById('lg').onclick=function(){const en=document.documentElement.dir==='rtl';document.documentElement.dir=en?'ltr':'rtl';document.documentElement.lang=en?'en':'ar';this.textContent=en?'ع':'EN';T.forEach(e=>e.textContent=en?e.dataset.en:e.dataset.ar)};
+if(location.hash==='#en')document.getElementById('lg').click();
+</script></body></html>
