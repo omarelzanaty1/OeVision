@@ -24,6 +24,14 @@ const ICON = {
   email: '<svg viewBox="0 0 24 24" fill="none" stroke="#f79321" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/></svg>'
 };
 
+/* Lucide icon paths (inline, stroke 1.75) */
+const LI = (p, c = "") => `<svg class="li ${c}" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+const ICN = {
+  up: LI('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>', "flip"),
+  folder: LI('<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>'),
+  alert: LI('<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>')
+};
+
 /* ---------- Project Brief config ---------- */
 const q = (id, type, req, ar, en, opts) => ({ id, type, req, ar, en, opts });
 const o = (...p) => p.map(x => ({ ar: x[0], en: x[1] }));
@@ -82,10 +90,10 @@ const views = {
     const tab = (k, a, e) => `<button class="${cat === k ? "on" : ""}" data-cat="${k}">${L(a, e)}</button>`;
     const cn = c => (c === "web" ? "Website Development" : "Graphic Design");
     let body;
-    if (PSTATE === "loading" || PSTATE === "idle") body = `<div class="empty">…</div>`;
-    else if (PSTATE === "error") body = `<div class="empty">${L("تعذّر تحميل الأعمال حاليًا.", "Could not load projects right now.")}</div>`;
-    else if (!list.length) body = `<div class="empty">${L("لا توجد أعمال منشورة حاليًا.", "No published projects yet.")}</div>`;
-    else body = `<div class="grid">${list.map(p => `<article class="card"><a href="#/work/${esc(p.slug || p.id)}"><div class="cv">${p.cover ? `<img loading="lazy" decoding="async" src="${esc(p.cover)}" style="${PV.coverStyle(p.focus)}" alt="${esc(P(p.title))}">` : ""}</div></a><div class="p"><span class="chip">${cn(p.category)}</span><b style="display:block;margin:10px 0 4px">${esc(P(p.title))}</b><p class="mu" style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(P(p.description))}</p><a class="btn" style="margin-top:12px;padding:8px 20px" href="#/work/${esc(p.slug || p.id)}">${L("عرض التفاصيل", "View details")}</a></div></article>`).join("")}</div>`;
+    if (PSTATE === "loading" || PSTATE === "idle") body = `<div class="grid wk" aria-busy="true" aria-label="${L("جارٍ التحميل", "Loading")}">${[0, 1, 2].map(() => `<div class="card sk-card"><div class="cv sk"></div><div class="p"><div class="sk" style="height:12px;width:40%"></div><div class="sk" style="height:16px;width:70%;margin-top:12px"></div></div></div>`).join("")}</div>`;
+    else if (PSTATE === "error") body = `<div class="empty err" role="alert">${ICN.alert}<b>${L("تعذّر تحميل الأعمال حاليًا.", "Could not load projects right now.")}</b><button class="btn gh" data-act="retry">${L("إعادة المحاولة", "Try again")}</button></div>`;
+    else if (!list.length) body = `<div class="empty">${ICN.folder}<b>${L("لا توجد أعمال منشورة حاليًا.", "No published projects yet.")}</b><span>${L("ستظهر المشاريع هنا فور نشرها.", "Projects will appear here as soon as they are published.")}</span></div>`;
+    else body = `<div class="grid wk">${list.map((p, i) => `<article class="card pc"><a class="pc-a" href="#/work/${esc(p.slug || p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><div class="cv">${p.cover ? `<img loading="lazy" decoding="async" src="${esc(p.cover)}" style="${PV.coverStyle(p.focus)}" alt="${esc(P(p.title))}">` : ""}</div></a><div class="p"><small class="lbl">${cn(p.category)}</small><b>${esc(P(p.title))}</b><p class="mu pc-d">${esc(P(p.description))}</p><a class="btn gh sm" href="#/work/${esc(p.slug || p.id)}">${L("عرض التفاصيل", "View details")} ${ICN.up}</a></div></article>`).join("")}</div>`;
     return `<div class="wrap"><h2>${L("الأعمال", "Work")}</h2><div class="tabs">${tab("all", "الكل", "All")}${tab("graphic", "Graphic Design", "Graphic Design")}${tab("web", "Website Development", "Website Development")}</div>${body}</div>`;
   },
   project(id) {
@@ -162,6 +170,7 @@ document.addEventListener("click", e => {
   if (t.dataset.login) { e.preventDefault(); return openAuth(); }
   if (t.dataset.cat) { app.innerHTML = views.work(t.dataset.cat); }
   if (t.dataset.svc) { if (!USER) return openAuth(t.dataset.svc); B = { svc: t.dataset.svc, step: 1, ans: {}, files: {}, err: "" }; render(); }
+  if (t.dataset.act === "retry") { PSTATE = "idle"; render(); }
   if (t.dataset.act === "back") { B = { svc: null, step: 0, ans: {}, files: {}, err: "" }; render(); }
   if (t.dataset.act === "edit") { B.step = 1; B.err = ""; render(); }
   if (t.dataset.act === "submit") submitBrief(t);
