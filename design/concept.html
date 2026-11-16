@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O.E — Design System Concept</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+/* ===== Tokens — extracted from assets/logo.svg (orange #F79321, blue #0F72BA) ===== */
+:root{
+  --bg:#0B0B0F; --s1:#101016; --s2:#16161E; --line:#232330; --line2:#34344A;
+  --tx:#F4F4F7; --mu:#9A9AAB; --mu2:#6C6C80;
+  --or:#F79321; --or-d:#C9740F;            /* logo orange */
+  --bl:#0F72BA; --bl-t:#4BA3E3;            /* logo blue; -t = lighter tint of the SAME hue, for small text on dark */
+  --ok:#38D98A; --warn:#E6C200; --bad:#FF6B6B;
+  --r-s:6px; --r-m:10px; --r-l:16px;       /* tighter, editorial radii (was 18/99px everywhere) */
+  --sp:8px; --ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--tx);font-family:Cairo,Outfit,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+.en{font-family:Outfit,Cairo,sans-serif}
+a{color:inherit;text-decoration:none}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.lbl{font:600 11px/1 Outfit,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--mu2)}
+.wrap{max-width:1280px;margin:auto;padding:0 clamp(16px,4vw,48px)}
+.sec{padding:clamp(48px,8vw,96px) 0;border-top:1px solid var(--line)}
+.sec>.wrap>.lbl{display:flex;gap:12px;align-items:center;margin-bottom:28px}.sec>.wrap>.lbl b{color:var(--or);font-weight:600}
+h2.t{font:800 clamp(26px,3.4vw,40px)/1.15 Outfit,Cairo,sans-serif;letter-spacing:-.02em;margin-bottom:12px}
+p.mu{color:var(--mu);max-width:60ch}
+
+/* ===== Nav ===== */
+.nav{position:sticky;top:0;z-index:5;background:#0B0B0Fee;border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:24px;height:64px}
+.brand{display:flex;align-items:center;gap:12px}.brand img{width:32px;height:32px}
+.brand span{font:800 13px Outfit;letter-spacing:.16em}
+.menu{margin-inline-start:auto;display:flex;gap:4px}
+.menu a{position:relative;padding:8px 14px;font-size:14px;color:var(--mu);display:flex;gap:8px;align-items:baseline;transition:color .2s}
+.menu a small{font:600 10px Outfit;color:var(--mu2);letter-spacing:.1em}
+.menu a:hover{color:var(--tx)}
+.menu a.on{color:var(--tx)}.menu a.on::after{content:"";position:absolute;inset-inline:14px;bottom:-1px;height:2px;background:var(--or)}
+.lang{font:700 12px Outfit;letter-spacing:.1em;color:var(--tx);border:1px solid var(--line2);border-radius:var(--r-s);padding:7px 12px;background:none;cursor:pointer;transition:.2s}
+.lang:hover{border-color:var(--or);color:var(--or)}
+.burger{display:none}
+@media(max-width:760px){.menu{display:none}.burger{display:flex;margin-inline-start:auto;border:1px solid var(--line2);border-radius:var(--r-s);background:none;color:var(--tx);width:38px;height:34px;align-items:center;justify-content:center}.nav .wrap{gap:12px}.lang{margin-inline-start:0}.brand span{display:none}}
+
+/* ===== Hero: asymmetric 12-col ===== */
+.hero{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(16px,2vw,32px);padding:clamp(32px,6vw,72px) 0;align-items:end}
+.hero .txt{grid-column:1/8;display:grid;gap:28px}
+.hero h1{font:800 clamp(52px,10.5vw,148px)/.88 Outfit,sans-serif;letter-spacing:-.045em;direction:ltr;text-align:start}
+.hero h1 em{font-style:normal;color:var(--or);display:block}
+.hero .role{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center;border-top:1px solid var(--line);padding-top:18px}
+.hero .role span{font:600 13px Outfit;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}
+.hero .role span::before{content:"";display:inline-block;width:6px;height:6px;background:var(--or);margin-inline-end:10px;vertical-align:middle}
+.hero .ph{grid-column:8/13;position:relative;aspect-ratio:4/5;border:1px solid var(--line2);border-radius:var(--r-m);overflow:hidden;background:#000 url(../assets/banner.png) no-repeat;background-size:600% auto;background-position:47.5% 20%}
+.hero .ph::before,.hero .ph::after{content:"";position:absolute;width:22px;height:22px;border:2px solid var(--or)}
+.hero .ph::before{inset-block-start:10px;inset-inline-start:10px;border-width:2px 0 0 2px}
+.hero .ph::after{inset-block-end:10px;inset-inline-end:10px;border-width:0 2px 2px 0}
+.hero .cap{position:absolute;inset-inline:0;bottom:0;padding:14px 16px;display:flex;justify-content:space-between;font:600 11px Outfit;letter-spacing:.12em;text-transform:uppercase;color:var(--tx);background:linear-gradient(transparent,#000a)}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+@media(max-width:860px){.hero{grid-template-columns:1fr}.hero .txt,.hero .ph{grid-column:1}.hero .ph{aspect-ratio:16/11;background-size:330% auto;background-position:47% 20%;order:-1}}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 20px;border-radius:var(--r-s);font:700 14px Cairo,Outfit;border:1px solid transparent;cursor:pointer;transition:transform .2s var(--ease),background .2s,border-color .2s,color .2s;white-space:nowrap}
+.btn svg{transition:transform .25s var(--ease)}
+.btn:hover svg{transform:translate(-2px,-2px)}[dir=rtl] .btn:hover svg.ar{transform:translate(2px,-2px)}
+.btn.p{background:var(--or);color:#0B0B0F}.btn.p:hover{background:#FFA13B}
+.btn.b{background:var(--bl);color:#fff}.btn.b:hover{background:#1384D4}
+.btn.g{background:none;border-color:var(--line2);color:var(--tx)}.btn.g:hover{border-color:var(--tx)}
+.btn.t{background:none;color:var(--mu);padding:0 8px}.btn.t:hover{color:var(--tx)}
+.btn.sm{height:34px;padding:0 14px;font-size:13px}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--bl-t);outline-offset:2px}
+
+/* ===== Work grid: asymmetric ===== */
+.wk{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(12px,1.6vw,24px)}
+.pc{position:relative;display:block;grid-column:span 4;border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;background:var(--s1);transition:border-color .25s}
+.pc:nth-child(1){grid-column:span 7}.pc:nth-child(2){grid-column:span 5}.pc:nth-child(3),.pc:nth-child(4),.pc:nth-child(5){grid-column:span 4}
+.pc .im{aspect-ratio:4/3;background:repeating-linear-gradient(135deg,#14141c 0 10px,#101016 10px 20px);display:grid;place-items:center;color:var(--mu2);font:600 11px Outfit;letter-spacing:.14em;transition:transform .6s var(--ease)}
+.pc:nth-child(1) .im{aspect-ratio:16/10}.pc:nth-child(2) .im{aspect-ratio:auto;height:100%;min-height:260px}
+.pc .im-w{overflow:hidden}.pc:nth-child(2){display:grid}
+.pc .meta{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
+.pc .meta b{font:600 15px Cairo,Outfit}.pc .meta small{display:block;color:var(--mu2);font:600 10px Outfit;letter-spacing:.14em;text-transform:uppercase}
+.pc .go{width:34px;height:34px;border:1px solid var(--line2);border-radius:var(--r-s);display:grid;place-items:center;color:var(--mu);transition:.25s var(--ease)}
+.pc:hover{border-color:var(--or)}.pc:hover .im{transform:scale(1.03)}.pc:hover .go{background:var(--or);border-color:var(--or);color:#0B0B0F}
+.pc .no{position:absolute;inset-block-start:12px;inset-inline-start:12px;font:600 11px Outfit;letter-spacing:.14em;background:var(--bg);border:1px solid var(--line2);border-radius:var(--r-s);padding:4px 8px;z-index:1}
+.flt{display:flex;gap:0;border:1px solid var(--line2);border-radius:var(--r-s);width:max-content;max-width:100%;overflow-x:auto;margin-bottom:24px}
+.flt button{background:none;border:0;color:var(--mu);font:600 13px Outfit,Cairo;padding:10px 18px;cursor:pointer;white-space:nowrap;transition:.2s}
+.flt button+button{border-inline-start:1px solid var(--line2)}.flt button.on{background:var(--tx);color:var(--bg)}.flt button:hover:not(.on){color:var(--tx)}
+@media(max-width:860px){.pc,.pc:nth-child(n){grid-column:span 12}.pc:nth-child(2) .im{aspect-ratio:4/3;height:auto;min-height:0}}
+
+/* ===== Components ===== */
+.cmp{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(16px,2vw,32px)}
+.cell{grid-column:span 6;border:1px solid var(--line);border-radius:var(--r-m);background:var(--s1);padding:24px;display:grid;gap:18px;align-content:start}
+.cell.w{grid-column:span 12}
+@media(max-width:860px){.cell{grid-column:span 12}}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.fld{display:grid;gap:8px}.fld>span{font:600 12px Outfit,Cairo;letter-spacing:.06em;color:var(--mu)}.fld>span i{color:var(--or);font-style:normal}
+.in{width:100%;height:46px;background:var(--bg);color:var(--tx);border:1px solid var(--line2);border-radius:var(--r-s);padding:0 14px;font:inherit;transition:border-color .2s,box-shadow .2s}
+.in:hover{border-color:var(--mu2)}.in:focus{outline:0;border-color:var(--bl-t);box-shadow:0 0 0 3px #0F72BA44}
+.in.bad{border-color:var(--bad)}.hint{font-size:12px;color:var(--bad)}
+textarea.in{height:96px;padding:12px 14px;resize:vertical}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border:1px solid var(--line2);border-radius:var(--r-s);font:600 12px Outfit,Cairo;color:var(--mu)}
+.chip.on{border-color:var(--or);color:var(--or)}
+.bd{display:inline-flex;align-items:center;gap:8px;font:600 11px Outfit;letter-spacing:.1em;text-transform:uppercase}
+.bd::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.bd.n{color:var(--bl-t)}.bd.r{color:var(--warn)}.bd.p{color:var(--or)}.bd.d{color:var(--ok)}.bd.x{color:var(--bad)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.steps i{height:3px;background:var(--line2)}.steps i.on{background:var(--or)}
+.sk{height:14px;border-radius:3px;background:linear-gradient(90deg,var(--s2) 0,#20202c 50%,var(--s2) 100%);background-size:200% 100%;animation:sk 1.4s linear infinite}@keyframes sk{to{background-position:-200% 0}}
+.st{border:1px dashed var(--line2);border-radius:var(--r-m);padding:28px;text-align:center;display:grid;gap:10px;justify-items:center;color:var(--mu)}
+.st svg{width:26px;height:26px;color:var(--mu2)}.st.e{border-color:#FF6B6B66;border-style:solid}.st.e svg{color:var(--bad)}
+.md{border:1px solid var(--line2);border-radius:var(--r-l);background:var(--s2);padding:28px;display:grid;gap:16px;max-width:380px}
+.md h3{font:800 22px Cairo,Outfit}
+.sep{display:flex;align-items:center;gap:12px;color:var(--mu2);font:600 11px Outfit;letter-spacing:.14em}.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* Builder */
+.bd-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--line2);border-radius:var(--r-m);background:var(--s1);padding:10px 12px}
+.bd-bar .sp{margin-inline-start:auto;color:var(--mu2);font-size:12px}
+.bk{border:1px solid var(--line);border-radius:var(--r-m);background:var(--s1)}
+.bk-h{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+.bk-h .lbl{margin-inline-end:auto}
+.ib{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line2);border-radius:var(--r-s);background:none;color:var(--mu);cursor:pointer;transition:.2s}
+.ib:hover{color:var(--tx);border-color:var(--tx)}.ib.d:hover{color:var(--bad);border-color:var(--bad)}
+.drop{margin:12px;border:1px dashed var(--line2);border-radius:var(--r-s);height:120px;display:grid;place-items:center;color:var(--mu);font-size:14px;transition:.2s}
+.drop:hover{border-color:var(--or);color:var(--or)}
+.add{display:flex;gap:8px;flex-wrap:wrap}
+.tok{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.sw{border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;background:var(--s1)}.sw i{display:block;height:64px}.sw div{padding:10px 12px;font:600 12px Outfit}.sw small{display:block;color:var(--mu2);font-weight:400}
+.ty{display:grid;gap:14px}.ty div{display:flex;gap:16px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:10px}.ty small{flex:none;width:92px;color:var(--mu2);font:600 10px Outfit;letter-spacing:.12em;text-transform:uppercase}
+.foot{padding:32px 0;border-top:1px solid var(--line);color:var(--mu2);font-size:13px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="up" viewBox="0 0 24 24"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="img" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+<symbol id="type" viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/></symbol>
+<symbol id="grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></symbol>
+<symbol id="eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
+<symbol id="dn" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="up2" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+<symbol id="al" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+<symbol id="fo" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+</defs></svg>
+
+<header class="nav"><div class="wrap">
+  <a class="brand" href="#"><img src="../assets/logo.svg" alt="O.E."><span>OMAR ELZANATY</span></a>
+  <nav class="menu en"><a class="on" href="#"><small>01</small>الرئيسية</a><a href="#"><small>02</small>الأعمال</a><a href="#"><small>03</small>Project Brief</a><a href="#"><small>04</small>تواصل</a><a href="#"><small>05</small>تسجيل الدخول</a></nav>
+  <button class="lang">EN</button>
+  <button class="burger" aria-label="Menu"><svg class="i"><use href="#menu"/></svg></button>
+</div></header>
+
+<main>
+<section class="wrap"><div class="hero">
+  <div class="txt">
+    <span class="lbl">Visual Identity Designer &amp; Web Developer — Egypt</span>
+    <h1>Omar<em>Elzanaty</em></h1>
+    <div class="role"><span>Visual Identity</span><span>Web Development</span></div>
+    <div class="cta"><a class="btn p" href="#">الأعمال <svg class="i ar"><use href="#up"/></svg></a><a class="btn g" href="#">Project Brief</a></div>
+  </div>
+  <div class="ph" role="img" aria-label="Omar Elzanaty"><div class="cap"><span>O.E.</span><span>Cairo</span></div></div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="lbl"><b>01</b> Design Tokens — من الشعار</div>
+  <h2 class="t">ألوان الهوية كما هي في الشعار</h2>
+  <p class="mu" style="margin-bottom:28px">استُخرجت من ملف الشعار نفسه. الأزرق المُفتَّح مشتق من نفس درجة اللون ويُستخدم فقط للنص الصغير على الخلفية الداكنة حتى يكون مقروءًا.</p>
+  <div class="tok en">
+    <div class="sw"><i style="background:#F79321"></i><div>Orange — logo<small>#F79321 · primary / CTA</small></div></div>
+    <div class="sw"><i style="background:#0F72BA"></i><div>Blue — logo<small>#0F72BA · secondary / focus</small></div></div>
+    <div class="sw"><i style="background:#4BA3E3"></i><div>Blue tint<small>#4BA3E3 · small text only</small></div></div>
+    <div class="sw"><i style="background:#0B0B0F;border-bottom:1px solid #232330"></i><div>Ink<small>#0B0B0F · background</small></div></div>
+    <div class="sw"><i style="background:#101016"></i><div>Surface 1<small>#101016 · cards</small></div></div>
+    <div class="sw"><i style="background:#16161E"></i><div>Surface 2<small>#16161E · modals</small></div></div>
+    <div class="sw"><i style="background:#232330"></i><div>Line<small>#232330 · hairlines</small></div></div>
+    <div class="sw"><i style="background:#F4F4F7"></i><div>Text<small>#F4F4F7</small></div></div>
+  </div>
+  <div class="ty en" style="margin-top:36px">
+    <div><small>Display</small><span style="font:800 56px/1 Outfit;letter-spacing:-.04em">Omar <span style="color:var(--or)">Elzanaty</span></span></div>
+    <div><small>Heading</small><span style="font:800 32px/1.1 Outfit;letter-spacing:-.02em">Selected Work</span></div>
+    <div><small>Body</small><span style="font:400 16px/1.7 Outfit;color:var(--mu)">Outfit + Cairo، نفس خطوط الموقع الحالي</span></div>
+    <div><small>Label</small><span class="lbl">Project Brief — 03</span></div>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="lbl"><b>02</b> Work — شبكة غير متماثلة</div>
+  <h2 class="t">الأعمال</h2>
+  <div class="flt en"><button class="on">الكل</button><button>Graphic Design</button><button>Website Development</button></div>
+  <div class="wk">
+    <a class="pc" href="#"><span class="no">01</span><div class="im-w" style="overflow:hidden"><div class="im en">PROJECT IMAGE</div></div><div class="meta"><div><small>Graphic Design</small><b>عنوان المشروع</b></div><span class="go"><svg class="i"><use href="#up"/></svg></span></div></a>
+    <a class="pc" href="#"><span class="no">02</span><div class="im-w" style="overflow:hidden"><div class="im en">PROJECT IMAGE</div></div><div class="meta"><div><small>Website</small><b>عنوان المشروع</b></div><span class="go"><svg class="i"><use href="#up"/></svg></span></div></a>
+    <a class="pc" href="#"><span class="no">03</span><div class="im-w" style="overflow:hidden"><div class="im en">PROJECT IMAGE</div></div><div class="meta"><div><small>Graphic Design</small><b>عنوان المشروع</b></div><span class="go"><svg class="i"><use href="#up"/></svg></span></div></a>
+    <a class="pc" href="#"><span class="no">04</span><div class="im-w" style="overflow:hidden"><div class="im en">PROJECT IMAGE</div></div><div class="meta"><div><small>Website</small><b>عنوان المشروع</b></div><span class="go"><svg class="i"><use href="#up"/></svg></span></div></a>
+    <a class="pc" href="#"><span class="no">05</span><div class="im-w" style="overflow:hidden"><div class="im en">PROJECT IMAGE</div></div><div class="meta"><div><small>Graphic Design</small><b>عنوان المشروع</b></div><span class="go"><svg class="i"><use href="#up"/></svg></span></div></a>
+  </div>
+  <p class="mu" style="margin-top:14px;font-size:13px">* الصور والعناوين هنا مجرد أماكن شاغلة للتصور؛ المحتوى الحقيقي لن يتغير.</p>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="lbl"><b>03</b> Components — النماذج والحالات</div>
+  <div class="cmp">
+    <div class="cell"><span class="lbl">Buttons</span>
+      <div class="row"><button class="btn p">إرسال الطلب</button><button class="btn b">تسجيل الدخول</button><button class="btn g">إلغاء</button><button class="btn t">رجوع</button></div>
+      <div class="row"><button class="btn p sm">نشر</button><button class="btn g sm">معاينة</button><span class="chip on">الكل</span><span class="chip">Graphic</span></div>
+      <div class="row en"><span class="bd n">New</span><span class="bd r">Reviewing</span><span class="bd p">In progress</span><span class="bd d">Completed</span><span class="bd x">Rejected</span></div>
+    </div>
+    <div class="cell"><span class="lbl">Form fields</span>
+      <label class="fld"><span>الاسم <i>*</i></span><input class="in" value="Omar"></label>
+      <label class="fld"><span>البريد الإلكتروني <i>*</i></span><input class="in bad" value="omar@"><b class="hint">أدخل بريدًا صحيحًا</b></label>
+      <label class="fld"><span>الرسالة</span><textarea class="in"></textarea></label>
+      <div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    </div>
+    <div class="cell"><span class="lbl">Auth modal</span>
+      <div class="md"><h3>تسجيل الدخول</h3>
+        <button class="btn g" style="justify-content:center">المتابعة باستخدام Google</button><div class="sep">OR</div>
+        <label class="fld"><span>البريد الإلكتروني</span><input class="in"></label>
+        <button class="btn p" style="justify-content:center">دخول</button></div>
+    </div>
+    <div class="cell"><span class="lbl">Loading · Empty · Error</span>
+      <div style="display:grid;gap:10px"><div class="sk" style="width:60%"></div><div class="sk"></div><div class="sk" style="width:80%"></div></div>
+      <div class="st"><svg class="i"><use href="#fo"/></svg><b style="color:var(--tx)">لا توجد أعمال بعد</b><span>ستظهر المشاريع هنا فور نشرها.</span></div>
+      <div class="st e"><svg class="i"><use href="#al"/></svg><b style="color:var(--tx)">تعذّر تحميل الأعمال</b><button class="btn g sm">إعادة المحاولة</button></div>
+    </div>
+    <div class="cell w"><span class="lbl">Project Builder</span>
+      <div class="bd-bar"><button class="btn t sm">← الأعمال</button><button class="btn p sm">Publish Project</button><button class="btn g sm"><svg class="i"><use href="#eye"/></svg>Preview Project</button><button class="btn g sm">Save Draft</button><span class="sp">التعديلات محفوظة محليًا</span></div>
+      <div class="add en"><button class="btn g sm"><svg class="i"><use href="#img"/></svg>صورة</button><button class="btn g sm"><svg class="i"><use href="#type"/></svg>نص</button><button class="btn g sm"><svg class="i"><use href="#grid"/></svg>شبكة صور</button><button class="btn g sm"><svg class="i"><use href="#plus"/></svg>فاصل</button></div>
+      <div class="bk"><div class="bk-h"><span class="lbl">01 — صورة</span><button class="ib"><svg class="i"><use href="#up2"/></svg></button><button class="ib"><svg class="i"><use href="#dn"/></svg></button><button class="ib d"><svg class="i"><use href="#x"/></svg></button></div><div class="drop">اسحب صورة هنا أو اضغط للاختيار</div></div>
+    </div>
+  </div>
+</div></section>
+</main>
+<footer class="foot"><div class="wrap">© 2026 Omar Elzanaty</div></footer>
+</body></html>
