@@ -6,7 +6,8 @@ async function loadProjects() {
   if (!window.sb) { PSTATE = "error"; return; }
   const { data, error } = await window.sb.from("projects").select("*").eq("is_published", true).order("display_order", { ascending: true }).order("created_at", { ascending: false });
   if (error) { PSTATE = "error"; return; }
-  PROJ = data.map(r => ({ id: r.id, title: { ar: r.title_ar, en: r.title_en }, description: { ar: r.description_ar, en: r.description_en }, category: r.category, cover: r.cover_image || (r.gallery_images || [])[0] || "", images: r.gallery_images || [], year: r.year || "", tools: r.tools || [], url: r.project_url }));
+  PROJ = data.map(r => ({ id: r.id, title: { ar: r.title_ar, en: r.title_en }, description: { ar: r.description_ar, en: r.description_en }, category: r.category, cover: r.cover_image || (r.gallery_images || [])[0] || "", images: r.gallery_images || [], year: r.year || "", tools: r.tools || [], url: r.project_url,
+    blocks: Array.isArray(r.content_blocks) ? r.content_blocks : [], tags: r.tags || [], client: r.client_name || "", date: r.project_date || "", field: r.creative_field || "", focus: r.cover_focus || null, slug: r.slug || "" }));
   PSTATE = "ready";
 }
 let lang = "ar";
@@ -84,17 +85,14 @@ const views = {
     if (PSTATE === "loading" || PSTATE === "idle") body = `<div class="empty">…</div>`;
     else if (PSTATE === "error") body = `<div class="empty">${L("تعذّر تحميل الأعمال حاليًا.", "Could not load projects right now.")}</div>`;
     else if (!list.length) body = `<div class="empty">${L("لا توجد أعمال منشورة حاليًا.", "No published projects yet.")}</div>`;
-    else body = `<div class="grid">${list.map(p => `<article class="card"><a href="#/work/${esc(p.id)}">${p.cover ? `<img loading="lazy" src="${esc(p.cover)}" alt="${esc(P(p.title))}">` : ""}</a><div class="p"><span class="chip">${cn(p.category)}</span><b style="display:block;margin:10px 0 4px">${esc(P(p.title))}</b><p class="mu" style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(P(p.description))}</p><a class="btn" style="margin-top:12px;padding:8px 20px" href="#/work/${esc(p.id)}">${L("عرض التفاصيل", "View details")}</a></div></article>`).join("")}</div>`;
+    else body = `<div class="grid">${list.map(p => `<article class="card"><a href="#/work/${esc(p.slug || p.id)}"><div class="cv">${p.cover ? `<img loading="lazy" decoding="async" src="${esc(p.cover)}" style="${PV.coverStyle(p.focus)}" alt="${esc(P(p.title))}">` : ""}</div></a><div class="p"><span class="chip">${cn(p.category)}</span><b style="display:block;margin:10px 0 4px">${esc(P(p.title))}</b><p class="mu" style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(P(p.description))}</p><a class="btn" style="margin-top:12px;padding:8px 20px" href="#/work/${esc(p.slug || p.id)}">${L("عرض التفاصيل", "View details")}</a></div></article>`).join("")}</div>`;
     return `<div class="wrap"><h2>${L("الأعمال", "Work")}</h2><div class="tabs">${tab("all", "الكل", "All")}${tab("graphic", "Graphic Design", "Graphic Design")}${tab("web", "Website Development", "Website Development")}</div>${body}</div>`;
   },
   project(id) {
-    const p = PROJ.find(x => x.id === id);
-    if (!p) return `<div class="wrap"><div class="empty">${L("المشروع غير موجود.", "Project not found.")}</div></div>`;
-    return `<div class="wrap"><a class="mu" href="#/work">← ${L("الأعمال", "Work")}</a><h1 style="margin:12px 0">${esc(P(p.title))}</h1>
-    <div class="chips"><span class="chip">${p.category === "web" ? "Website Development" : "Graphic Design"}</span><span class="chip">${esc(p.year)}</span>${(p.tools || []).map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div>
-    <p class="mu" style="max-width:760px;margin-bottom:28px">${esc(P(p.description))}</p>
-    <div class="shots">${(p.images || []).map(i => `<img loading="lazy" src="${esc(i)}" alt="">`).join("")}</div>
-    ${p.url ? `<a class="btn or" target="_blank" rel="noopener" href="${esc(p.url)}">${L("معاينة المشروع", "Live preview")}</a>` : ""}</div>`;
+    if (PSTATE === "loading" || PSTATE === "idle") return `<div class="wrap"><div class="empty">…</div></div>`;
+    const p = PROJ.find(x => x.slug === id || x.id === id);
+    if (!p) return `<div class="wrap"><div class="empty">${L("المشروع غير موجود.", "Project not found.")}</div><div class="row" style="justify-content:center"><a class="btn gh" href="#/work">← ${L("العودة لمعرض الأعمال", "Back to Work")}</a></div></div>`;
+    return PV.render(p, { L, P, backHref: "#/work" });
   },
   brief() {
     const steps = `<div class="steps">${[0, 1, 2].map(i => `<i class="${i <= B.step ? "on" : ""}"></i>`).join("")}</div>`;
