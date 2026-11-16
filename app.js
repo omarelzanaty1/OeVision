@@ -67,15 +67,15 @@ let B = { svc: null, step: 0, ans: {}, files: {}, err: "" };
 /* ---------- Views ---------- */
 const views = {
   home() {
-    const sk = S.skills.length ? `<h2>${L("المهارات والأدوات", "Skills & Tools")}</h2><div class="chips">${S.skills.map(s => `<span class="chip">${esc(P(s))}</span>`).join("")}</div>` : "";
-    return `<section class="hero"><img src="assets/banner.png" alt="Omar Elzanaty"></section>
-    <div class="wrap"><img src="assets/logo.svg" alt="O.E." width="64" height="64" style="border-radius:14px;margin-bottom:16px">
-    <h1>Omar <b>Elzanaty</b></h1>
-    <div class="chips"><span class="chip">Visual Identity Designer &amp; Web Developer</span><span class="chip">📍 Egypt</span></div>
-    <p class="mu" style="max-width:760px;margin-top:12px">${L("أنا عمر الزناتي، مصمم هويات بصرية ومطور مواقع إلكترونية من مصر. أعمل على تحويل الأفكار إلى هويات بصرية مميزة وتجارب رقمية احترافية، من خلال الجمع بين الإبداع والتصميم والتكنولوجيا.", "I'm Omar Elzanaty, a visual identity designer and web developer from Egypt. I turn ideas into distinctive visual identities and professional digital experiences by combining creativity, design and technology.")}</p>
-    <p class="mu" style="max-width:760px;margin-top:12px">${L("هدفي هو مساعدة العلامات التجارية والأفراد على بناء حضور قوي ومميز، سواء من خلال تصميم هوية بصرية متكاملة أو تطوير موقع إلكتروني يعكس قيمة المشروع ويحقق أهدافه.", "My goal is to help brands and individuals build a strong, memorable presence, whether through a complete visual identity or a website that reflects the value of the project and achieves its goals.")}</p>
-    <div class="row"><a class="btn" href="#/brief">${L("ابدأ مشروعك", "Start a project")}</a><a class="btn gh" href="#/work">${L("شاهد أعمالي", "View my work")}</a></div>
-    <div style="margin-top:48px">${sk}</div></div>`;
+    const sk = S.skills.length ? `<span class="lbl" style="display:block;margin-top:28px">${L("المهارات والأدوات", "Skills & Tools")}</span><div class="chips">${S.skills.map(s => `<span class="chip">${esc(P(s))}</span>`).join("")}</div>` : "";
+    return `<section class="wrap hero"><div class="txt"><span class="lbl">Visual Identity Designer &amp; Web Developer — Egypt</span>
+    <h1 class="dn" dir="ltr">Omar<b>Elzanaty</b></h1>
+    <div class="role"><span>Visual Identity</span><span>Web Development</span></div>
+    <div class="row"><a class="btn or" href="#/brief">${L("ابدأ مشروعك", "Start a project")}</a><a class="btn gh" href="#/work">${L("شاهد أعمالي", "View my work")}</a></div></div>
+    <div class="ph"><div class="pimg"><img src="assets/banner.png" alt="Omar Elzanaty" width="2080" height="696" fetchpriority="high" decoding="async"></div><div class="cap"><span>O.E.</span><span>Egypt</span></div></div></section>
+    <section class="wrap about"><div class="about-l"><img src="assets/logo.svg" alt="O.E." width="48" height="48"><span class="lbl">${L("نبذة", "About")}</span></div>
+    <div class="about-r"><p class="lead">${L("أنا عمر الزناتي، مصمم هويات بصرية ومطور مواقع إلكترونية من مصر. أعمل على تحويل الأفكار إلى هويات بصرية مميزة وتجارب رقمية احترافية، من خلال الجمع بين الإبداع والتصميم والتكنولوجيا.", "I'm Omar Elzanaty, a visual identity designer and web developer from Egypt. I turn ideas into distinctive visual identities and professional digital experiences by combining creativity, design and technology.")}</p>
+    <p class="mu">${L("هدفي هو مساعدة العلامات التجارية والأفراد على بناء حضور قوي ومميز، سواء من خلال تصميم هوية بصرية متكاملة أو تطوير موقع إلكتروني يعكس قيمة المشروع ويحقق أهدافه.", "My goal is to help brands and individuals build a strong, memorable presence, whether through a complete visual identity or a website that reflects the value of the project and achieves its goals.")}</p>${sk}</div></section>`;
   },
   work(cat = "all") {
     const list = PROJ.filter(p => cat === "all" || p.category === cat);
@@ -245,7 +245,12 @@ async function submitBrief(btn) {
 document.addEventListener("click", async e => { const b = e.target.closest('[data-act="logout"]'); if (b) { await sb.auth.signOut(); location.hash = "#/home"; } });
 document.addEventListener("submit", async e => { if (e.target.id !== "af") return; e.preventDefault(); const { error } = await sb.from("profiles").update({ full_name: new FormData(e.target).get("n").trim() }).eq("id", USER.id); $("#am").textContent = error ? error.message : L("تم الحفظ.", "Saved."); });
 $("#lang").onclick = () => { lang = lang === "ar" ? "en" : "ar"; try { localStorage.setItem("lang", lang); } catch (e) {} render(); };
-window.addEventListener("hashchange", render);
+const navEl = $(".nav"), burger = $("#burger");
+const setNav = o => { navEl.classList.toggle("open", o); burger.setAttribute("aria-expanded", String(o)); };
+burger.onclick = () => setNav(!navEl.classList.contains("open"));
+$("#menu").addEventListener("click", e => { if (e.target.closest("a")) setNav(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") setNav(false); });
+window.addEventListener("hashchange", () => { setNav(false); render(); });
 $("#yr").textContent = new Date().getFullYear();
 if (sb) { let first = true, prev = null; sb.auth.onAuthStateChange((ev, session) => { const id = session?.user?.id || null; if (!first && id === prev) return; first = false; prev = id; USER = session?.user || null; if (USER) applyPending(); render(); checkAdmin(); }); } else render();
 })();
