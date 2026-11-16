@@ -29,6 +29,7 @@ const LI = (p, c = "") => `<svg class="li ${c}" viewBox="0 0 24 24" aria-hidden=
 const ICN = {
   up: LI('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>', "flip"),
   folder: LI('<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>'),
+  pin: LI('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>'),
   alert: LI('<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>')
 };
 
@@ -73,27 +74,41 @@ let USER = null, ACC = null, ISADMIN = false; const sb = window.sb; const BUCKET
 let B = { svc: null, step: 0, ans: {}, files: {}, err: "" };
 
 /* ---------- Views ---------- */
+const cnName = c => (c === "web" ? "Website Development" : "Graphic Design");
+function projBody(list, max, uni) {
+  const cn = cnName; let body;
+    if (PSTATE === "loading" || PSTATE === "idle") body = `<div class="grid wk" aria-busy="true" aria-label="${L("جارٍ التحميل", "Loading")}">${[0, 1, 2].map(() => `<div class="card sk-card"><div class="cv sk"></div><div class="p"><div class="sk" style="height:12px;width:40%"></div><div class="sk" style="height:16px;width:70%;margin-top:12px"></div></div></div>`).join("")}</div>`;
+    else if (PSTATE === "error") body = `<div class="empty err" role="alert">${ICN.alert}<b>${L("تعذّر تحميل الأعمال حاليًا.", "Could not load projects right now.")}</b><button class="btn gh" data-act="retry">${L("إعادة المحاولة", "Try again")}</button></div>`;
+    else if (!list.length) body = `<div class="empty">${ICN.folder}<b>${L("لا توجد أعمال منشورة حاليًا.", "No published projects yet.")}</b><span>${L("ستظهر المشاريع هنا فور نشرها.", "Projects will appear here as soon as they are published.")}</span></div>`;
+    else body = `<div class="grid wk${uni ? " uni" : ""}">${(max ? list.slice(0, max) : list).map((p, i) => `<article class="card pc"><a class="pc-a" href="#/work/${esc(p.slug || p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><div class="cv">${p.cover ? `<img loading="lazy" decoding="async" src="${esc(p.cover)}" style="${PV.coverStyle(p.focus)}" alt="${esc(P(p.title))}">` : ""}</div></a><div class="p"><small class="lbl">${cn(p.category)}</small><b>${esc(P(p.title))}</b><p class="mu pc-d">${esc(P(p.description))}</p><a class="btn gh sm" href="#/work/${esc(p.slug || p.id)}">${L("عرض التفاصيل", "View details")} ${ICN.up}</a></div></article>`).join("")}</div>`;
+  return body;
+}
 const views = {
   home() {
-    const sk = S.skills.length ? `<span class="lbl" style="display:block;margin-top:28px">${L("المهارات والأدوات", "Skills & Tools")}</span><div class="chips">${S.skills.map(s => `<span class="chip">${esc(P(s))}</span>`).join("")}</div>` : "";
-    return `<section class="wrap hero"><div class="txt"><span class="lbl">Visual Identity Designer &amp; Web Developer — Egypt</span>
-    <h1 class="dn" dir="ltr">Omar<b>Elzanaty</b></h1>
-    <div class="role"><span>Visual Identity</span><span>Web Development</span></div>
-    <div class="row"><a class="btn or" href="#/brief">${L("ابدأ مشروعك", "Start a project")}</a><a class="btn gh" href="#/work">${L("شاهد أعمالي", "View my work")}</a></div></div>
-    <div class="ph"><div class="pimg"><img src="assets/banner.png" alt="Omar Elzanaty" width="2080" height="696" fetchpriority="high" decoding="async"></div><div class="cap"><span>O.E.</span><span>Egypt</span></div></div></section>
-    <section class="wrap about"><div class="about-l"><img src="assets/logo.svg" alt="O.E." width="48" height="48"><span class="lbl">${L("نبذة", "About")}</span></div>
-    <div class="about-r"><p class="lead">${L("أنا عمر الزناتي، مصمم هويات بصرية ومطور مواقع إلكترونية من مصر. أعمل على تحويل الأفكار إلى هويات بصرية مميزة وتجارب رقمية احترافية، من خلال الجمع بين الإبداع والتصميم والتكنولوجيا.", "I'm Omar Elzanaty, a visual identity designer and web developer from Egypt. I turn ideas into distinctive visual identities and professional digital experiences by combining creativity, design and technology.")}</p>
-    <p class="mu">${L("هدفي هو مساعدة العلامات التجارية والأفراد على بناء حضور قوي ومميز، سواء من خلال تصميم هوية بصرية متكاملة أو تطوير موقع إلكتروني يعكس قيمة المشروع ويحقق أهدافه.", "My goal is to help brands and individuals build a strong, memorable presence, whether through a complete visual identity or a website that reflects the value of the project and achieves its goals.")}</p>${sk}</div></section>`;
+    const sec = (id, num, a, e, inner) => `<section class="hs" id="${id}"><div class="wrap"><div class="hs-h"><span class="lbl">${num}</span><h2>${L(a, e)}</h2></div>${inner}</div></section>`;
+    const soon = (a, e) => `<div class="empty">${ICN.folder}<b>${L(a, e)}</b></div>`;
+    const skills = S.skills.length ? `<div class="chips big">${S.skills.map(x => `<span class="chip">${esc(P(x))}</span>`).join("")}</div>` : soon("سيتم إضافة المهارات والأدوات قريبًا.", "Skills & tools will be added soon.");
+    const tl = (arr, empty) => arr.length ? `<ol class="tl">${arr.map(x => `<li><b>${esc(P(x.title))}</b><span class="mu">${esc(P(x.org))}${x.period ? " · " + esc(x.period) : ""}</span>${x.desc ? `<p class="mu">${esc(P(x.desc))}</p>` : ""}</li>`).join("")}</ol>` : empty;
+    const exp = `<div class="two-c"><div><h3>${L("الخبرات", "Experience")}</h3>${tl(S.experience || [], soon("سيتم إضافة الخبرات قريبًا.", "Experience will be added soon."))}</div><div><h3>${L("التعليم", "Education")}</h3>${tl(S.education || [], soon("سيتم إضافة التعليم قريبًا.", "Education will be added soon."))}</div></div>`;
+    const svc = `<div class="svc">${Object.keys(SERVICES).map((k, i) => `<a class="svc-i" href="#/brief"><span class="lbl">${String(i + 1).padStart(2, "0")}</span><b>${P(SERVICES[k])}</b>${ICN.up}</a>`).join("")}</div>`;
+    const l = S.links, items = [["facebook", "Facebook", l.facebook], ["instagram", "Instagram", l.instagram], ["whatsapp", "WhatsApp", l.whatsapp], ["behance", "Behance", l.behance], ["email", "Email", l.email && "mailto:" + l.email]].filter(x => x[2]);
+    const contact = `<div class="soc">${items.map(([k, n, h]) => `<a href="${esc(h)}" ${k === "email" ? "" : 'target="_blank" rel="noopener"'}>${ICON[k]}<span>${n}</span></a>`).join("")}</div><div class="row" style="margin-top:0"><a class="btn or" href="#/contact">${L("أرسل رسالة", "Send a message")}</a><a class="btn gh" href="#/brief">Project Brief</a></div>`;
+    return `<section class="pf" id="top"><div class="cover"><img src="assets/banner.png" alt="Omar Elzanaty — Visual Identity Designer &amp; Web Developer" width="2080" height="696" fetchpriority="high" decoding="async"></div>
+    <div class="wrap pf-b"><div class="avatar"><img src="assets/logo.svg" alt="O.E." width="200" height="200"></div>
+    <div class="pf-t"><div><h1>Omar Elzanaty</h1><p class="hl" dir="ltr">Visual Identity Designer &amp; Web Developer</p><p class="loc mu">${ICN.pin}<span dir="ltr">Egypt</span></p></div>
+    <div class="row"><a class="btn or" href="#/work">${L("أعمالي", "My Work")}</a><a class="btn gh" href="#/brief">Project Brief</a></div></div></div></section>
+    <section class="hs" id="about"><div class="wrap"><div class="hs-h"><span class="lbl">01</span><h2>${L("نبذة عني", "About Me")}</h2></div><div class="about-r"><p class="lead">${L("أنا عمر الزناتي، مصمم هويات بصرية ومطور مواقع إلكترونية من مصر. أعمل على تحويل الأفكار إلى هويات بصرية مميزة وتجارب رقمية احترافية، من خلال الجمع بين الإبداع والتصميم والتكنولوجيا.", "I'm Omar Elzanaty, a visual identity designer and web developer from Egypt. I turn ideas into distinctive visual identities and professional digital experiences by combining creativity, design and technology.")}</p>
+    <p class="mu">${L("هدفي هو مساعدة العلامات التجارية والأفراد على بناء حضور قوي ومميز، سواء من خلال تصميم هوية بصرية متكاملة أو تطوير موقع إلكتروني يعكس قيمة المشروع ويحقق أهدافه.", "My goal is to help brands and individuals build a strong, memorable presence, whether through a complete visual identity or a website that reflects the value of the project and achieves its goals.")}</p></div></div></section>
+    ${sec("skills", "02", "المهارات والأدوات", "Skills & Tools", skills)}
+    ${sec("selected-work", "03", "أعمال مختارة", "Selected Work", projBody(PROJ, 6, true) + (PSTATE === "ready" && PROJ.length ? `<div class="row"><a class="btn gh" href="#/work">${L("عرض كل الأعمال", "View all work")} ${ICN.up}</a></div>` : ""))}
+    ${sec("experience", "04", "الخبرات والتعليم", "Experience & Education", exp)}
+    ${sec("services", "05", "الخدمات", "Services", svc)}
+    ${sec("contact", "06", "تواصل معي", "Contact", contact)}`;
   },
   work(cat = "all") {
     const list = PROJ.filter(p => cat === "all" || p.category === cat);
     const tab = (k, a, e) => `<button class="${cat === k ? "on" : ""}" data-cat="${k}">${L(a, e)}</button>`;
-    const cn = c => (c === "web" ? "Website Development" : "Graphic Design");
-    let body;
-    if (PSTATE === "loading" || PSTATE === "idle") body = `<div class="grid wk" aria-busy="true" aria-label="${L("جارٍ التحميل", "Loading")}">${[0, 1, 2].map(() => `<div class="card sk-card"><div class="cv sk"></div><div class="p"><div class="sk" style="height:12px;width:40%"></div><div class="sk" style="height:16px;width:70%;margin-top:12px"></div></div></div>`).join("")}</div>`;
-    else if (PSTATE === "error") body = `<div class="empty err" role="alert">${ICN.alert}<b>${L("تعذّر تحميل الأعمال حاليًا.", "Could not load projects right now.")}</b><button class="btn gh" data-act="retry">${L("إعادة المحاولة", "Try again")}</button></div>`;
-    else if (!list.length) body = `<div class="empty">${ICN.folder}<b>${L("لا توجد أعمال منشورة حاليًا.", "No published projects yet.")}</b><span>${L("ستظهر المشاريع هنا فور نشرها.", "Projects will appear here as soon as they are published.")}</span></div>`;
-    else body = `<div class="grid wk">${list.map((p, i) => `<article class="card pc"><a class="pc-a" href="#/work/${esc(p.slug || p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><div class="cv">${p.cover ? `<img loading="lazy" decoding="async" src="${esc(p.cover)}" style="${PV.coverStyle(p.focus)}" alt="${esc(P(p.title))}">` : ""}</div></a><div class="p"><small class="lbl">${cn(p.category)}</small><b>${esc(P(p.title))}</b><p class="mu pc-d">${esc(P(p.description))}</p><a class="btn gh sm" href="#/work/${esc(p.slug || p.id)}">${L("عرض التفاصيل", "View details")} ${ICN.up}</a></div></article>`).join("")}</div>`;
+    const body = projBody(list);
     return `<div class="wrap"><h2>${L("الأعمال", "Work")}</h2><div class="tabs">${tab("all", "الكل", "All")}${tab("graphic", "Graphic Design", "Graphic Design")}${tab("web", "Website Development", "Website Development")}</div>${body}</div>`;
   },
   project(id) {
@@ -116,7 +131,7 @@ const views = {
     if (!ACC) return `<div class="wrap"><div class="empty">…</div></div>`;
     const pr = ACC.profile || {}, d = x => new Date(x).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB");
     const reqs = ACC.reqs.length ? ACC.reqs.map(r => `<details class="panel" style="margin-bottom:12px"><summary style="cursor:pointer;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>${esc(SERVICES[r.service_type] ? P(SERVICES[r.service_type]) : r.service_type)}</b><span class="mu">${d(r.created_at)}</span><span class="stb ${r.status}">${P(STAT[r.status])}</span></summary><dl style="margin-top:14px">${(r.brief_answers || []).map(a => `<dt>${esc(P(a.q))}</dt><dd>${esc(a.a)}</dd>`).join("")}${(r.request_attachments || []).length ? `<dt>${L("الملفات المرفقة", "Attachments")}</dt><dd>${r.request_attachments.map(f => esc(f.file_name)).join("، ")}</dd>` : ""}</dl></details>`).join("") : `<div class="empty">${L("لا توجد طلبات بعد.", "No requests yet.")}</div>`;
-    return `<div class="wrap"><h2>${L("حسابي", "My Account")}</h2><form id="af" style="margin-bottom:32px"><div class="row" style="margin:0;align-items:center">${pr.avatar_url ? `<img src="${esc(pr.avatar_url)}" alt="" width="64" height="64" style="border-radius:50%" referrerpolicy="no-referrer">` : ""}<div><b>${esc(pr.email || USER.email)}</b><div class="mu" style="font-size:13px">${L("تاريخ التسجيل", "Member since")}: ${d(pr.created_at || USER.created_at)}</div></div></div><label>${L("الاسم", "Name")}<input name="n" value="${esc(pr.full_name)}"></label><div class="row" style="margin:0"><button class="btn">${L("حفظ", "Save")}</button><button type="button" class="btn gh" data-act="logout">${L("تسجيل الخروج", "Log out")}</button></div><div id="am" class="mu"></div></form><h2>${L("طلباتي", "My requests")}</h2>${reqs}</div>`;
+    return `<div class="wrap"><h2>${L("حسابي", "My Account")}</h2><form id="af" style="margin-bottom:32px"><div class="row" style="margin:0;align-items:center">${pr.avatar_url ? `<img src="${esc(pr.avatar_url)}" alt="" width="64" height="64" style="border-radius:50%" referrerpolicy="no-referrer">` : ""}<div><b>${esc(pr.email || USER.email)}</b><div class="mu" style="font-size:13px">${L("تاريخ التسجيل", "Member since")}: ${d(pr.created_at || USER.created_at)}</div></div></div><label>${L("الاسم", "Name")}<input name="n" value="${esc(pr.full_name)}"></label><div class="row" style="margin:0"><button class="btn">${L("حفظ", "Save")}</button><button type="button" class="btn gh" data-act="logout">${L("تسجيل الخروج", "Log out")}</button></div><div id="am" class="mu"></div></form><h2 id="reqs">${L("طلباتي", "My requests")}</h2>${reqs}</div>`;
   },
   contact() {
     const l = S.links, items = [["facebook", "Facebook", l.facebook], ["instagram", "Instagram", l.instagram], ["whatsapp", "WhatsApp", l.whatsapp], ["behance", "Behance", l.behance], ["email", "Email", l.email && "mailto:" + l.email]].filter(x => x[2]);
@@ -138,7 +153,12 @@ const waText = svc => `${L("طلب جديد من الموقع", "New request fro
 const NAV = [["home", "الرئيسية", "Home"], ["work", "الأعمال", "Work"], ["brief", "Project Brief", "Project Brief"], ["contact", "تواصل", "Contact"]];
 /* The Dashboard link is a convenience only: ISADMIN comes from the database function is_admin(); real protection is RLS + the checks in admin.js. */
 function drawMenu(r = (location.hash || "#/home").slice(2).split("/")[0] || "home", nav = NAV) {
-  $("#menu").innerHTML = nav.map(([k, a, e]) => `<a href="#/${k}" class="${r === k ? "on" : ""}">${L(a, e)}</a>`).join("") + (USER ? `<a href="#/account" class="${r === "account" ? "on" : ""}">${L("حسابي", "My Account")}</a>` : `<a href="#" data-login="1">${L("تسجيل الدخول", "Login")}</a>`) + (ISADMIN ? `<a href="admin.html">Dashboard</a>` : "");
+  const sub = (location.hash || "").split("/")[2] || "", n = nav.map(([k, a, e], i) => `<a href="#/${k}" class="${r === k ? "on" : ""}">${L(a, e)}</a>`).join("");
+  const out = `<button type="button" class="mi out" data-act="logout">${L("تسجيل الخروج", "Logout")}</button>`;
+  const acct = !USER ? `<a href="#" data-login="1">${L("تسجيل الدخول", "Login")}</a>`
+    : ISADMIN ? `<a href="admin.html" class="dash">Dashboard</a>${out}`
+    : `<a href="#/account" class="${r === "account" && sub !== "requests" ? "on" : ""}">${L("حسابي", "My Account")}</a><a href="#/account/requests" class="${r === "account" && sub === "requests" ? "on" : ""}">${L("طلباتي", "My Requests")}</a>${out}`;
+  $("#menu").innerHTML = `<div class="mn">${n}</div><div class="ac">${acct}</div>`;
 }
 async function checkAdmin() {
   ISADMIN = false;
@@ -151,11 +171,11 @@ function render() {
   $("#lang").textContent = lang === "ar" ? "EN" : "AR";
   const nav = [["home", "الرئيسية", "Home"], ["work", "الأعمال", "Work"], ["brief", "Project Brief", "Project Brief"], ["contact", "تواصل", "Contact"]];
   drawMenu(r, nav);
-  if (r === "work" && PSTATE === "idle") loadProjects().then(render);
+  if ((r === "work" || r === "home") && PSTATE === "idle") loadProjects().then(render);
   if (r === "account") { if (!USER) { app.innerHTML = `<div class="wrap"><div class="empty">${L("سجّل الدخول لعرض حسابك.", "Sign in to view your account.")}<div class="row" style="justify-content:center"><button class="btn" data-login="1">${L("تسجيل الدخول", "Login")}</button></div></div></div>`; return; } ACC = null; loadAccount(); }
   app.innerHTML = r === "account" ? views.account() : r === "work" && h[1] ? views.project(h[1]) : (views[r] || views.home)();
   document.title = "Omar Elzanaty — Personal Portfolio";
-  window.scrollTo(0, 0);
+  if (r === "account" && h[1] === "requests") { const q = document.getElementById("reqs"); if (q) q.scrollIntoView(); else window.scrollTo(0, 0); } else window.scrollTo(0, 0);
 }
 function collect(form) {
   const svc = SERVICES[B.svc], d = new FormData(form); B.ans = {};
@@ -254,12 +274,18 @@ async function submitBrief(btn) {
 document.addEventListener("click", async e => { const b = e.target.closest('[data-act="logout"]'); if (b) { await sb.auth.signOut(); location.hash = "#/home"; } });
 document.addEventListener("submit", async e => { if (e.target.id !== "af") return; e.preventDefault(); const { error } = await sb.from("profiles").update({ full_name: new FormData(e.target).get("n").trim() }).eq("id", USER.id); $("#am").textContent = error ? error.message : L("تم الحفظ.", "Saved."); });
 $("#lang").onclick = () => { lang = lang === "ar" ? "en" : "ar"; try { localStorage.setItem("lang", lang); } catch (e) {} render(); };
-const navEl = $(".nav"), burger = $("#burger");
-const setNav = o => { navEl.classList.toggle("open", o); burger.setAttribute("aria-expanded", String(o)); };
-burger.onclick = () => setNav(!navEl.classList.contains("open"));
-$("#menu").addEventListener("click", e => { if (e.target.closest("a")) setNav(false); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") setNav(false); });
-window.addEventListener("hashchange", () => { setNav(false); render(); });
+const sideEl = $("#side"), scrim = $("#scrim"), burger = $("#burger");
+function setSide(o) {
+  sideEl.classList.toggle("open", o); scrim.hidden = !o; sideEl.setAttribute("aria-hidden", String(!o)); burger.setAttribute("aria-expanded", String(o));
+  document.body.classList.toggle("noscroll", o);
+  if (o) $("#sclose").focus(); else if (document.activeElement && sideEl.contains(document.activeElement)) burger.focus();
+}
+burger.onclick = () => setSide(!sideEl.classList.contains("open"));
+$("#sclose").onclick = () => setSide(false);
+scrim.onclick = () => setSide(false);
+sideEl.addEventListener("click", e => { if (e.target.closest("a,[data-act=logout]")) setSide(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && sideEl.classList.contains("open")) setSide(false); });
+window.addEventListener("hashchange", () => { setSide(false); render(); });
 $("#yr").textContent = new Date().getFullYear();
 if (sb) { let first = true, prev = null; sb.auth.onAuthStateChange((ev, session) => { const id = session?.user?.id || null; if (!first && id === prev) return; first = false; prev = id; USER = session?.user || null; if (USER) applyPending(); render(); checkAdmin(); }); } else render();
 })();

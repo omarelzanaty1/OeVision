@@ -12,7 +12,10 @@
 </head>
 <body>
 <header class="nav"><a class="brand" href="#/home"><img src="assets/logo.svg" alt="O.E."><span>OMAR ELZANATY</span></a>
-<nav id="menu"></nav><button id="lang" class="lang" aria-label="Language">EN</button><button id="burger" class="burger" type="button" aria-label="Menu" aria-controls="menu" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></header>
+<button id="lang" class="lang" aria-label="Language">EN</button><button id="burger" class="burger" type="button" aria-label="Menu" aria-controls="side" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></header>
+<div id="scrim" class="scrim" hidden></div>
+<aside id="side" class="side" aria-hidden="true" aria-label="Menu"><div class="side-h"><a class="brand" href="#/home"><img src="assets/logo.svg" alt="O.E."><span>OMAR ELZANATY</span></a><button id="sclose" class="burger" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+<nav id="menu"></nav></aside>
 <main id="app"></main>
 <footer class="foot">© <span id="yr"></span> Omar Elzanaty</footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>

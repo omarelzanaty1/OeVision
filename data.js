@@ -7,6 +7,8 @@ window.SITE = {
     behance: "",            // ضع رابط Behance هنا عند توفره
     email: "omarelzanaty344@gmail.com"
   },
+  experience: [],           // مثال: {title:{ar:"",en:""}, org:{ar:"",en:""}, period:"2024 – الآن", desc:{ar:"",en:""}}
+  education: [],            // نفس شكل experience
   skills: [],               // مثال: {ar:"فوتوشوب", en:"Photoshop", group:"tools"}
   // مثال مشروع: {id:"p1", title:{ar:"",en:""}, category:"graphic"|"web", description:{ar:"",en:""},
   //  cover:"assets/p1/cover.jpg", images:["assets/p1/1.jpg"], year:2026, tools:["Illustrator"], url:"", published:true}
