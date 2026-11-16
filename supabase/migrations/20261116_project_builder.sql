@@ -25,11 +25,18 @@ alter table public.projects
   add constraint projects_content_blocks_chk check (
     jsonb_typeof(content_blocks) = 'array'
     and jsonb_array_length(content_blocks) <= 300
-    and pg_column_size(content_blocks) <= 500000),
+    and pg_column_size(content_blocks) <= 500000
+    -- every block is an object whose "type" is one of the 5 types the editor supports
+    and not jsonb_path_exists(content_blocks,
+      '$[*] ? (@.type() != "object" || @.type.type() != "string" || !(@.type == "image" || @.type == "text" || @.type == "grid" || @.type == "embed" || @.type == "divider"))')),
   add constraint projects_tags_chk           check (cardinality(tags) <= 30 and pg_column_size(tags) <= 3000),
   add constraint projects_creative_field_chk check (creative_field is null or char_length(creative_field) <= 120),
   add constraint projects_client_name_chk    check (client_name is null or char_length(client_name) <= 200),
-  add constraint projects_cover_focus_chk    check (jsonb_typeof(cover_focus) = 'object' and pg_column_size(cover_focus) <= 200),
+  -- cover_focus: x,y in [0,100] and zoom in [1,3], all three numeric (the editor always sends all three)
+  add constraint projects_cover_focus_chk    check (
+    jsonb_typeof(cover_focus) = 'object' and pg_column_size(cover_focus) <= 200
+    and jsonb_path_exists(cover_focus,
+      '$ ? (@.x.type() == "number" && @.x >= 0 && @.x <= 100 && @.y.type() == "number" && @.y >= 0 && @.y <= 100 && @.zoom.type() == "number" && @.zoom >= 1 && @.zoom <= 3)')),
   add constraint projects_slug_chk           check (slug is null or (char_length(slug) between 1 and 80 and slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'));
 
 create unique index if not exists projects_slug_key on public.projects (slug) where slug is not null;
