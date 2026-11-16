@@ -35,7 +35,7 @@ function fromRow(r) {
     title_ar: r.title_ar || "", title_en: r.title_en || "", description_ar: r.description_ar || "", description_en: r.description_en || "",
     category: r.category || "graphic", creative_field: r.creative_field || "", tags: [...(r.tags || [])], tools: [...(r.tools || [])], client_name: r.client_name || "",
     project_date: r.project_date || "", project_url: r.project_url || "", slug: r.slug || "", published: !!r.is_published, cover: r.cover_image || "",
-    focus: { x: +f.x || 50, y: +f.y || 50, zoom: +f.zoom || 1 }, slugTouched: !!r.slug } };
+    focus: { x: Number.isFinite(+f.x) && f.x !== null ? +f.x : 50, y: Number.isFinite(+f.y) && f.y !== null ? +f.y : 50, zoom: +f.zoom >= 1 ? +f.zoom : 1 }, slugTouched: !!r.slug } };
 }
 function fresh() { return { id: uid(), isNew: true, savedPublished: false, blocks: [], set: blankSet() }; }
 const runtime = s => Object.assign(s, { rev: 0, dirty: false, saving: false, up: 0, active: null, pendingRemove: new Set(), uploaded: new Set(), chain: Promise.resolve(), tLocal: 0, tAuto: 0, lastSaved: "" });
