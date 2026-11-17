@@ -1,9 +1,12 @@
 -- ============================================================================
--- Website Editor — two NEW tables (nothing existing is altered)
+-- Website Editor — 3 NEW tables + 1 NEW private storage bucket (nothing existing is altered)
 -- STATUS: NOT APPLIED. Review first, then run once (SQL Editor or apply_migration).
 --
 --   site_content_drafts     admin only (read + write). Visitors can never see drafts.
 --   site_content_published  everyone can READ; only admins can write.
+--   site_content_versions   admin only, APPEND-ONLY history (a copy of the published page is kept before every publish / un-publish).
+--   bucket "site-drafts"    PRIVATE, admin only. Images uploaded while editing live here (visitors cannot read them);
+--                           on Publish the editor copies them into the existing public bucket "project-images" (site/ prefix).
 --
 -- One row per page key: home | work | brief | contact | global
 --   (global = banner / logo / personal photo + social links)
@@ -11,8 +14,9 @@
 -- Publishing = the editor copies the draft row into the published table.
 --
 -- Safety:
---   * No change to existing tables, policies, auth, or storage policies.
---     Images go to the existing admin-only bucket "project-images" under the "site/" prefix.
+--   * No change to existing tables, policies, auth, or EXISTING storage policies/buckets. The only storage additions are the new
+--     private bucket "site-drafts" and three admin-only policies that apply to that bucket alone (bucket_id = 'site-drafts').
+--     Published images use the existing public bucket "project-images" (site/ prefix), written by the admin-only policies already there.
 --   * Access uses the same public.is_admin() function as projects.
 --   * Size/shape limits via CHECK constraints (<=60 sections, <=900KB, known section types only).
 --   * The site works without these tables (built-in defaults), so ordering of deploy/apply is not critical.
@@ -86,5 +90,39 @@ create policy "published admin update" on public.site_content_published
 create policy "published admin delete" on public.site_content_published
   for delete to authenticated using (public.is_admin());
 
--- Rollback (only if ever needed; drops all saved site content):
---   drop table public.site_content_published; drop table public.site_content_drafts; drop function public.site_content_touch();
+-- ---------------------------------------------------------------------------
+-- Version history: append-only (no UPDATE / DELETE policy or grant exists, so nothing can be altered or lost)
+-- ---------------------------------------------------------------------------
+create table public.site_content_versions (
+  id         uuid primary key default gen_random_uuid(),
+  key        text        not null,
+  content    jsonb       not null,
+  note       text,
+  created_at timestamptz not null default now(),
+  created_by uuid        default auth.uid(),
+  constraint site_content_versions_key_chk  check (key in ('home','work','brief','contact','global')),
+  constraint site_content_versions_note_chk check (note is null or char_length(note) <= 200),
+  constraint site_content_versions_body_chk check (jsonb_typeof(content) = 'object' and pg_column_size(content) <= 900000)
+);
+create index site_content_versions_key_idx on public.site_content_versions (key, created_at desc);
+alter table public.site_content_versions enable row level security;
+revoke all on public.site_content_versions from anon, authenticated;
+grant select, insert on public.site_content_versions to authenticated;          -- narrowed to admins by RLS; no update/delete
+create policy "versions admin read"   on public.site_content_versions for select to authenticated using (public.is_admin());
+create policy "versions admin insert" on public.site_content_versions for insert to authenticated with check (public.is_admin());
+
+-- ---------------------------------------------------------------------------
+-- Private bucket for draft images (not public: no public URL works, only admin signed URLs)
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('site-drafts', 'site-drafts', false, 8388608, array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do nothing;
+create policy "sdraft admin select" on storage.objects for select to authenticated using (bucket_id = 'site-drafts' and (select public.is_admin()));
+create policy "sdraft admin insert" on storage.objects for insert to authenticated with check (bucket_id = 'site-drafts' and (select public.is_admin()));
+create policy "sdraft admin update" on storage.objects for update to authenticated using (bucket_id = 'site-drafts' and (select public.is_admin())) with check (bucket_id = 'site-drafts' and (select public.is_admin()));
+-- (no delete policy on purpose: draft files are never auto-deleted)
+
+-- Rollback (only if ever needed; removes saved site content, history and the draft bucket policies; NEVER touches projects):
+--   drop table public.site_content_versions; drop table public.site_content_published; drop table public.site_content_drafts; drop function public.site_content_touch();
+--   drop policy "sdraft admin select" on storage.objects; drop policy "sdraft admin insert" on storage.objects; drop policy "sdraft admin update" on storage.objects;
+--   (the bucket "site-drafts" itself is removed from the Storage dashboard once emptied)

@@ -381,11 +381,12 @@ function preview() {
 }
 
 /* Reused by the Website Editor: same optimizer + same admin-only bucket, under the "site/" prefix (no storage policy change). */
-async function uploadPrepared(c, p) {
+async function uploadPrepared(c, p, bucket) {
+  bucket = bucket || BUCKET;
   const ext = { "image/webp": "webp", "image/png": "png", "image/gif": "gif" }[p.file.type] || "jpg", path = `site/${uid()}.${ext}`;
-  const { error } = await c.sb.storage.from(BUCKET).upload(path, p.file, { contentType: p.file.type, upsert: false, cacheControl: "31536000" });
+  const { error } = await c.sb.storage.from(bucket).upload(path, p.file, { contentType: p.file.type, upsert: false, cacheControl: "31536000" });
   if (error) throw error;
-  return { url: c.sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl, w: p.w, h: p.h, path };
+  return { url: bucket === BUCKET ? c.sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl : "", w: p.w, h: p.h, path };   /* private buckets never get a public URL */
 }
 window.Builder = { open, restoreCurrent, canLeave, urlsOf, pathOf, BUCKET, prepare, uploadPrepared };
 })();

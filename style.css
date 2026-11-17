@@ -268,3 +268,5 @@ body.noscroll{overflow:hidden}
 @media(max-width:1100px){.we-grid,.we-grid.g{grid-template-columns:1fr}.we-p{position:static}}
 @media(max-width:640px){.we-soc-r{grid-template-columns:28px 1fr}.we-soc-r input[data-p]{grid-column:1/-1}.we-v{grid-column:1/-1}}
 input[type=range]{padding:0;accent-color:var(--or)}
+
+.we-ver{margin-bottom:12px}.we-vr{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line)}.we-vr .mu{flex:1}

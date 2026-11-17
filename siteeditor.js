@@ -7,10 +7,16 @@
 const { esc, SOCIALS, ICONS, socialHref, normalize, defaultPage, newSection, render: renderSec, ICON, bannerRatio, focusCss, uid, T } = SEC;
 const KEYS = [["home", "الرئيسية"], ["work", "الأعمال"], ["brief", "Project Brief"], ["contact", "التواصل"], ["global", "الصور والتواصل"]];
 const TYPES = { profile: "رأس الملف (Profile Header)", about: "نبذة عني (About Me)", skills: "المهارات والأدوات (Skills & Tools)", experience: "الخبرات (Experience)", education: "التعليم (Education)", services: "الخدمات (Services)", projects: "معرض المشاريع (Project Gallery)", gallery: "معرض صور (Image Gallery)", text: "قسم نصي (Text)", contact: "التواصل (Contact)", custom: "قسم محتوى مخصص (Custom)", core: "قسم أساسي" };
-const MAXSEC = 60;
+const MAXSEC = 60, DRAFT = "site-drafts";
+/* Draft images live in the PRIVATE admin-only bucket "site-drafts" and are stored as "draft:<path>". Visitors can neither read that bucket
+   nor render such a reference. Publishing copies them into the public bucket and rewrites the references to public URLs. */
+const isRef = u => typeof u === "string" && u.startsWith("draft:");
+const refsIn = o => [...new Set(J(o).match(/draft:[^"]+/g) || [])];
 let ctx, root = null, S = null, tPrev = 0;
 const clone = o => JSON.parse(JSON.stringify(o));
 const J = o => JSON.stringify(o);
+const ru = u => (isRef(u) ? (S.signed[u] || "") : u);
+const resolveDeep = o => JSON.parse(J(o).replace(/draft:[^"]+/g, m => S.signed[m] || ""));
 const getp = (o, p) => p.split(".").reduce((a, k) => (a == null ? a : a[k]), o);
 function setp(o, p, v) { const a = p.split("."); while (a.length > 1) { const k = a.shift(); if (o[k] == null || typeof o[k] !== "object") o[k] = /^\d+$/.test(a[0]) ? [] : {}; o = o[k]; } o[a[0]] = v; }
 const dflt = k => (k === "global" ? SEC.defaultGlobal(window.SITE) : defaultPage(k, window.SITE));
@@ -20,7 +26,7 @@ const isMissing = e => e && /does not exist|schema cache|relation .*site_content
 async function load() {
   const [d, p] = await Promise.all([ctx.sb.from("site_content_drafts").select("key,content"), ctx.sb.from("site_content_published").select("key,content")]);
   if (d.error || p.error) { const e = d.error || p.error; return { missing: isMissing(e), error: e.message }; }
-  const st = { key: S ? S.key : "home", W: {}, saved: {}, pub: {}, hasPub: {}, sel: null, view: "d", plang: "ar", pend: {}, busy: false, big: false };
+  const st = { key: S ? S.key : "home", signed: {}, tried: {}, showVer: false, vers: [], W: {}, saved: {}, pub: {}, hasPub: {}, sel: null, view: "d", plang: "ar", pend: {}, busy: false, big: false };
   const dm = Object.fromEntries((d.data || []).map(x => [x.key, x.content])), pm = Object.fromEntries((p.data || []).map(x => [x.key, x.content]));
   for (const [k] of KEYS) {
     st.hasPub[k] = !!pm[k]; st.pub[k] = J(normalize(k, pm[k], window.SITE));
@@ -43,7 +49,7 @@ const inp = (lab, p, o, a = {}) => `<label>${lab}<input data-p="${p}" value="${e
 const bi = (lab, p, o, ta) => `<div class="we-bi"><b>${lab}</b><div class="two">${["ar", "en"].map(l => `<label><small>${l === "ar" ? "العربية" : "English"}</small>${ta ? `<textarea data-p="${p}.${l}" dir="${l === "ar" ? "rtl" : "ltr"}">${esc(val(o, p + "." + l))}</textarea>` : `<input data-p="${p}.${l}" dir="${l === "ar" ? "rtl" : "ltr"}" value="${esc(val(o, p + "." + l))}">`}</label>`).join("")}</div></div>`;
 const sel = (lab, p, o, opts) => `<label>${lab}<select data-p="${p}">${opts.map(([v, t]) => `<option value="${v}" ${String(val(o, p)) === String(v) ? "selected" : ""}>${t}</option>`).join("")}</select></label>`;
 const chk = (lab, p, o, inv) => `<label class="we-chk"><input type="checkbox" data-p="${p}" ${inv ? "data-inv=1" : ""} ${(inv ? !getp(o, p) : getp(o, p)) ? "checked" : ""}> ${lab}</label>`;
-const imgF = (lab, p, o, str) => { const u = str ? val(o, p) : val(o, p + ".url"), d = !str && getp(o, p + ".w") ? `${getp(o, p + ".w")}×${getp(o, p + ".h")} px` : ""; return `<div class="we-img"><b>${lab}</b><div class="we-img-r">${SEC.safeImg(u) ? `<img src="${esc(SEC.safeImg(u))}" alt="">` : `<span class="we-noimg">لا توجد صورة</span>`}<div><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-${str ? "ups" : "up"}="${p}" aria-label="${esc(lab)}">${d ? `<small class="mu">الأبعاد: ${d}</small>` : ""}${u ? `<button type="button" class="btn gh sm" data-act="img-clear" data-p="${p}" data-s="${str ? 1 : 0}">إزالة الصورة</button>` : ""}</div></div></div>`; };
+const imgF = (lab, p, o, str) => { const u = ru(str ? val(o, p) : val(o, p + ".url")), d = !str && getp(o, p + ".w") ? `${getp(o, p + ".w")}×${getp(o, p + ".h")} px` : ""; return `<div class="we-img"><b>${lab}</b><div class="we-img-r">${SEC.safeImg(u) ? `<img src="${esc(SEC.safeImg(u))}" alt="">` : `<span class="we-noimg">لا توجد صورة</span>`}<div><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-${str ? "ups" : "up"}="${p}" aria-label="${esc(lab)}">${d ? `<small class="mu">الأبعاد: ${d}</small>` : ""}${u ? `<button type="button" class="btn gh sm" data-act="img-clear" data-p="${p}" data-s="${str ? 1 : 0}">إزالة الصورة</button>` : ""}</div></div></div>`; };
 const ICON_OPTS = [["", "— بدون —"], ...Object.keys(ICONS).map(k => [k, k])];
 
 /* repeating items (add / delete / reorder / hide) */
@@ -88,7 +94,7 @@ const secPath = p => p.replace(/^d\./, "data.");
 
 /* ---------- global (banner / logo / photo / social links) ---------- */
 function cropBox(b, w, m) {
-  const r = bannerRatio(b), u = SEC.safeImg(b.url);
+  const r = bannerRatio(b), u = SEC.safeImg(ru(b.url));
   return `<div class="we-crop" style="--cr:${m ? r.m : r.d};${m ? "width:min(100%,220px)" : ""}" data-crop="${m ? "m" : "d"}">${u ? `<img src="${esc(u)}" style="${focusCss(b.focus)}" alt="" draggable="false">` : ""}</div>`;
 }
 function globalForm() {
@@ -110,7 +116,7 @@ function globalForm() {
 /* ---------- preview ---------- */
 function previewHtml(k) {
   const pk = k === "global" ? "home" : k, lang = S.plang, Lf = (a, e) => (lang === "ar" ? a : e), Pf = o => (o && (o[lang] || o.en || o.ar)) || "";
-  const g = normalize("global", S.W.global, window.SITE), pg = normalize(pk, S.W[pk], window.SITE);
+  const g = normalize("global", resolveDeep(S.W.global), window.SITE), pg = normalize(pk, resolveDeep(S.W[pk]), window.SITE);
   const ph = `<div class="grid wk uni">${[1, 2, 3].map(i => `<article class="card pc"><div class="cv"><span class="no">0${i}</span></div><div class="p"><b>${Lf("مشروع منشور", "Published project")}</b></div></article>`).join("")}</div>`;
   const ctx2 = { L: Lf, P: Pf, projectsReady: () => true, projectList: () => [1], projects: () => ph,
     core: (n, d) => `<div class="wrap"><h2>${esc(Pf(d.title) || ({ work: Lf("الأعمال", "Work"), brief: "Project Brief", contact: Lf("تواصل معي", "Contact") }[n]))}</h2>${Pf(d.desc) ? `<p class="mu">${esc(Pf(d.desc))}</p>` : ""}${n === "contact" ? SEC.socHtml(SEC.socialLinks(g)) : ""}<div class="empty">${Lf("المحتوى الوظيفي للصفحة (" + n + ") يظهر هنا", "Functional " + n + " content appears here")}</div></div>` };
@@ -125,10 +131,18 @@ function fit() {
 function preview() { const f = root && root.querySelector("#we-pv"); if (!f) return; f.srcdoc = previewHtml(S.key); fit(); }
 const prevSoon = () => { clearTimeout(tPrev); tPrev = setTimeout(preview, 220); };
 
+/* signed (1h) preview URLs for draft images; never public */
+function signMissing() {
+  if (!S || S.missing || S.fail) return;
+  const need = KEYS.flatMap(([k]) => refsIn(S.W[k])).filter((r, i, a) => a.indexOf(r) === i && !S.signed[r] && !S.tried[r]);
+  if (!need.length) return;
+  need.forEach(r => { S.tried[r] = 1; });
+  Promise.all(need.map(async r => { try { const { data } = await ctx.sb.storage.from(DRAFT).createSignedUrl(r.slice(6), 3600); if (data && data.signedUrl) S.signed[r] = data.signedUrl; } catch (e) {} })).then(() => { if (S && root) mount(); });
+}
 /* ---------- drawing ---------- */
 function bar() {
   return `<div class="we-bar"><div class="we-tabs" role="tablist">${KEYS.map(([k, n]) => `<button type="button" role="tab" class="btn gh sm ${S.key === k ? "on" : ""}" data-key="${k}" aria-selected="${S.key === k}">${n}${dirty(k) ? ' <i class="we-dot" title="تعديلات غير محفوظة"></i>' : unpub(k) ? ' <i class="we-dot pub" title="غير منشور"></i>' : ""}</button>`).join("")}</div>
-  <div class="we-act"><span id="we-state" class="mu">${stateText()}</span><button type="button" class="btn gh sm" data-act="revert">الرجوع للمنشور</button><button type="button" class="btn sm" data-act="save" ${S.busy ? "disabled" : ""}>حفظ مسودة</button><button type="button" class="btn or sm" data-act="publish" ${S.busy ? "disabled" : ""}>نشر</button></div></div>`;
+  <div class="we-act"><span id="we-state" class="mu">${stateText()}</span><button type="button" class="btn gh sm" data-act="revert">استعادة آخر نسخة منشورة</button><button type="button" class="btn gh sm" data-act="versions">الإصدارات السابقة</button><button type="button" class="btn gh sm dng" data-act="unpublish" ${S.hasPub[S.key] && !S.busy ? "" : "disabled"}>إلغاء النشر</button><button type="button" class="btn sm" data-act="save" ${S.busy ? "disabled" : ""}>حفظ مسودة</button><button type="button" class="btn or sm" data-act="publish" ${S.busy ? "disabled" : ""}>نشر</button></div></div>`;
 }
 const stateText = () => dirty(S.key) ? "تعديلات غير محفوظة" : unpub(S.key) ? "مسودة محفوظة — غير منشورة (لا يراها الزوار)" : "منشور ✓";
 function list() {
@@ -149,12 +163,14 @@ function editor() {
 function mount() {
   if (S.missing) { root.innerHTML = `<div class="panel"><h2>Website Editor</h2><p>جداول المحرر لم تُطبَّق على Supabase بعد. الموقع يعمل حاليًا بالمحتوى الافتراضي.</p><p class="mu">الملف الجاهز للمراجعة: <code dir="ltr">supabase/migrations/20261117_website_editor.sql</code> — لم يُطبَّق.</p>${S.error ? `<div class="err">${esc(S.error)}</div>` : ""}</div>`; return; }
   if (S.fail) { root.innerHTML = `<div class="panel"><h2>Website Editor</h2><div class="err">تعذّر تحميل المحتوى: ${esc(S.error)}</div><div class="row"><button class="btn" data-act="reload">إعادة المحاولة</button></div></div>`; return; }
-  root.innerHTML = `<div class="we"><h2 class="we-h">Website Editor</h2>${bar()}<div id="we-msg" class="we-msg" role="status"></div>
+  root.innerHTML = `<div class="we"><h2 class="we-h">Website Editor</h2>${bar()}<div id="we-msg" class="we-msg" role="status"></div>${verPanel()}
   <div class="we-grid ${S.key === "global" ? "g" : ""}"><div class="we-l">${S.key === "global" ? "" : list()}<div id="we-e">${editor()}</div></div>
   <div class="we-p"><div class="we-ph"><div class="seg"><button type="button" class="btn gh sm ${S.view === "d" ? "on" : ""}" data-view="d">Desktop</button><button type="button" class="btn gh sm ${S.view === "m" ? "on" : ""}" data-view="m">Mobile</button></div><div class="seg"><button type="button" class="btn gh sm ${S.plang === "ar" ? "on" : ""}" data-pl="ar">AR</button><button type="button" class="btn gh sm ${S.plang === "en" ? "on" : ""}" data-pl="en">EN</button><button type="button" class="btn gh sm" data-act="big">${S.big ? "تصغير" : "تكبير"}</button></div></div>
   <div class="we-fr"><iframe id="we-pv" title="معاينة" sandbox="allow-same-origin"></iframe></div><small class="mu">المعاينة تعرض ما سيراه الزوار بعد النشر، بعرض الشاشة الفعلي (media queries حقيقية).</small></div></div></div>`;
-  root.querySelector(".we").classList.toggle("big", S.big); if (S.msg) say(S.msg.t, S.msg.bad); preview();
+  root.querySelector(".we").classList.toggle("big", S.big); if (S.msg) say(S.msg.t, S.msg.bad); preview(); signMissing();
 }
+const verPanel = () => !S.showVer ? "" : `<div class="we-card we-ver"><h3>الإصدارات السابقة — ${esc((KEYS.find(x => x[0] === S.key) || [])[1])}</h3><p class="mu">تُحفظ نسخة تلقائيًا قبل كل نشر وقبل إلغاء النشر (للقراءة والإضافة فقط). الاستعادة تضع الإصدار في المسودة ولا تغيّر الموقع قبل أن تنشر.</p>${S.vers.length ? S.vers.map(v => `<div class="we-vr"><span dir="ltr">${esc(new Date(v.created_at).toLocaleString("ar-EG"))}</span><span class="mu">${esc(v.note || "")}</span><button type="button" class="btn gh sm" data-act="ver-restore" data-id="${esc(v.id)}">استعادة في المسودة</button></div>`).join("") : `<div class="mu we-empty">لا توجد إصدارات سابقة لهذه الصفحة بعد.</div>`}</div>`;
+async function loadVersions() { const r = await ctx.sb.from("site_content_versions").select("id,created_at,note").eq("key", S.key).order("created_at", { ascending: false }).limit(30); if (r.error) { say("تعذّر تحميل الإصدارات: " + friendly(r.error), 1); S.vers = []; } else S.vers = r.data || []; }
 const redrawBar = () => { const b = root.querySelector(".we-bar"); if (b) b.outerHTML = bar(); };
 
 /* ---------- actions ---------- */
@@ -209,7 +225,7 @@ async function uploadPending() {
   let out = str;
   for (const u of blobs) {
     const p = S.pend[u]; if (!p) { say("تعذّر العثور على ملف الصورة المحلي؛ اخترها مرة أخرى.", 1); return false; }
-    try { const r = await Builder.uploadPrepared(ctx, p); out = out.split(u).join(r.url); } catch (e) { say("فشل رفع الصورة: " + friendly(e), 1); return false; }
+    try { const r = await Builder.uploadPrepared(ctx, p, DRAFT); out = out.split(u).join("draft:" + r.path); } catch (e) { say("فشل رفع الصورة: " + friendly(e), 1); return false; }
   }
   S.W[S.key] = JSON.parse(out); blobs.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) {} delete S.pend[u]; });
   return true;
@@ -224,15 +240,48 @@ async function saveDraft(quiet) {
     S.saved[k] = J(content); if (!quiet) say("تم حفظ المسودة. لا يراها الزوار قبل النشر."); return true;
   } finally { S.busy = false; mount(); }
 }
+async function snapshot(k, note) {   /* keep the currently published copy before it is replaced/removed; abort the caller on failure */
+  const cur = await ctx.sb.from("site_content_published").select("content").eq("key", k);
+  if (cur.error) return cur.error;
+  if (cur.data && cur.data[0]) { const v = await ctx.sb.from("site_content_versions").insert({ key: k, content: cur.data[0].content, note }); if (v.error) return v.error; }
+  return null;
+}
 async function publish() {
-  if (!confirm("نشر هذه الصفحة للزوار الآن؟")) return;
+  if (!confirm("نشر هذه الصفحة للزوار الآن؟ (تُحفظ نسخة من المنشور الحالي أولًا)")) return;
   if (!await saveDraft(true)) return;
-  if (!await ctx.guard()) return; const k = S.key;
-  S.busy = true; redrawBar();
-  const { error } = await ctx.sb.from("site_content_published").upsert({ key: k, content: S.W[k], published_at: new Date().toISOString() }, { onConflict: "key" });
-  S.busy = false;
-  if (error) { mount(); return say("تعذّر النشر: " + friendly(error), 1); }
-  S.hasPub[k] = true; S.pub[k] = J(S.W[k]); mount(); say("تم النشر ✓ — التعديلات ظاهرة الآن للزوار.");
+  if (!await ctx.guard()) return; const k = S.key; S.busy = true; redrawBar();
+  try {
+    let str = J(S.W[k]);
+    for (const r of refsIn(S.W[k])) {   /* promote draft images to the public bucket (copy: the draft copy is kept) */
+      const path = r.slice(6), { error } = await ctx.sb.storage.from(DRAFT).copy(path, path, { destinationBucket: Builder.BUCKET });
+      if (error && !/already exists|duplicate/i.test(error.message || "")) return say("تعذّر نشر إحدى الصور — لم يتم النشر: " + friendly(error), 1);
+      str = str.split(r).join(ctx.sb.storage.from(Builder.BUCKET).getPublicUrl(path).data.publicUrl);
+    }
+    const content = JSON.parse(str), se = await snapshot(k, "قبل النشر");
+    if (se) return say("تعذّر حفظ نسخة من المنشور الحالي — لم يتم النشر: " + friendly(se), 1);
+    const { error } = await ctx.sb.from("site_content_published").upsert({ key: k, content, published_at: new Date().toISOString() }, { onConflict: "key" });
+    if (error) return say("تعذّر النشر: " + friendly(error), 1);
+    S.W[k] = content; S.hasPub[k] = true; S.pub[k] = J(content);
+    const d = await ctx.sb.from("site_content_drafts").upsert({ key: k, content }, { onConflict: "key" }); if (!d.error) S.saved[k] = J(content);
+    if (S.showVer) await loadVersions();
+    say("تم النشر ✓ — التعديلات ظاهرة الآن للزوار.");
+  } finally { S.busy = false; mount(); }
+}
+async function unpublish() {
+  const k = S.key; if (!S.hasPub[k]) return;
+  if (!confirm("إلغاء نشر هذه الصفحة؟ سيعود الموقع للمحتوى الافتراضي لها. تُحفظ نسخة من المنشور الحالي، وتبقى المسودة والمشاريع كما هي.")) return;
+  if (!await ctx.guard()) return; S.busy = true; redrawBar();
+  try {
+    const se = await snapshot(k, "قبل إلغاء النشر"); if (se) return say("تعذّر حفظ نسخة من المنشور الحالي — لم يُلغَ النشر: " + friendly(se), 1);
+    const { error } = await ctx.sb.from("site_content_published").delete().eq("key", k); if (error) return say("تعذّر إلغاء النشر: " + friendly(error), 1);
+    S.hasPub[k] = false; S.pub[k] = J(dflt(k)); if (S.showVer) await loadVersions();
+    say("تم إلغاء النشر — الموقع يعرض المحتوى الافتراضي لهذه الصفحة. المسودة محفوظة ويمكنك نشرها لاحقًا.");
+  } finally { S.busy = false; mount(); }
+}
+async function restoreVersion(id) {
+  const r = await ctx.sb.from("site_content_versions").select("content").eq("id", id);
+  if (r.error || !r.data || !r.data[0]) return say("تعذّر تحميل الإصدار.", 1);
+  S.W[S.key] = clone(normalize(S.key, r.data[0].content, window.SITE)); S.sel = null; mount(); say("تم تحميل الإصدار في المسودة (غير محفوظ). راجعه ثم احفظ أو انشر.");
 }
 
 /* ---------- events ---------- */
@@ -246,10 +295,13 @@ function bind() {
     if (["add", "del", "hide", "dup", "up", "dn", "select"].includes(a)) return secAct(a, b);
     if (a.startsWith("item-")) return listAct(a, b);
     if (a === "save") return saveDraft();
+    if (a === "unpublish") return unpublish();
+    if (a === "versions") { S.showVer = !S.showVer; if (S.showVer) await loadVersions(); return mount(); }
+    if (a === "ver-restore") return restoreVersion(b.dataset.id);
     if (a === "publish") return publish();
     if (a === "reload") { await open(ctx); return; }
     if (a === "big") { S.big = !S.big; root.querySelector(".we").classList.toggle("big", S.big); b.textContent = S.big ? "تصغير" : "تكبير"; return fit(); }
-    if (a === "revert") { if (!confirm("تجاهل المسودة الحالية والرجوع للنسخة المنشورة؟")) return; S.W[S.key] = JSON.parse(S.hasPub[S.key] ? S.pub[S.key] : J(dflt(S.key))); S.sel = null; mount(); return say("تم الرجوع للنسخة المنشورة (لم يُحفظ بعد)."); }
+    if (a === "revert") { if (!confirm("تجاهل التعديلات الحالية واستعادة آخر نسخة منشورة؟")) return; S.W[S.key] = JSON.parse(S.hasPub[S.key] ? S.pub[S.key] : J(dflt(S.key))); S.sel = null; mount(); return say("تمت استعادة آخر نسخة منشورة في المحرر (لم يُحفظ بعد)."); }
     if (a === "img-clear") { const tgt = secOrGlobal(b.dataset.p); if (!tgt) return; if (b.dataset.s === "1") setp(tgt.o, tgt.p, ""); else setp(tgt.o, tgt.p, { url: "", w: 0, h: 0 }); root.querySelector("#we-e").innerHTML = editor(); redrawBar(); return preview(); }
     if (a === "logo-reset") { page().assets.logo = { url: "assets/logo.svg" }; root.querySelector("#we-e").innerHTML = editor(); redrawBar(); preview(); return say("تمت استعادة الشعار الأصلي في المسودة."); }
   };
