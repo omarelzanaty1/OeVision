@@ -34,7 +34,7 @@ const anyDirty = () => S && !S.missing && KEYS.some(([k]) => dirty(k));
 const page = () => S.W[S.key];
 
 /* ---------- messages ---------- */
-function say(t, bad) { if (S) S.msg = { t, bad }; const el = root && root.querySelector("#we-msg"); if (el) { el.textContent = t; el.className = "we-msg " + (bad ? "err" : "ok"); } }
+function say(t, bad) { if (S) S.msg = { t, bad }; const el = root && root.querySelector("#we-msg"); if (el) { el.textContent = t; el.className = "we-msg " + (bad ? "we-bad" : "we-good"); } }
 const friendly = e => { const m = String((e && e.message) || e || ""); return isMissing(e) ? "جداول Website Editor لم تُطبَّق على قاعدة البيانات بعد." : /row-level security|permission denied/i.test(m) ? "ليس لديك صلاحية الكتابة (للمدير المعتمد فقط)." : /check constraint/i.test(m) ? "المحتوى يتجاوز الحدود المسموحة (الحجم/عدد الأقسام)." : m; };
 
 /* ---------- field helpers ---------- */
@@ -104,7 +104,7 @@ function globalForm() {
   ${ass("logo", "شعار O.E", "يُعرض كاملًا بنسبته الأصلية دون قص أو إطار دائري. الملف الأصلي SVG محفوظ؛ لاستبداله ارفع PNG/WebP بخلفية شفافة (SVG غير مسموح في التخزين الحالي).", `<button type="button" class="btn gh sm" data-act="logo-reset">استعادة الشعار الأصلي</button>`)}
   ${ass("avatar", "الصورة الشخصية (اختيارية)", "صورة مستقلة تظهر بجوار الشعار في رأس الصفحة (مربعة تقريبًا، 800×800 px أو أكبر). لا تظهر إلا إذا رفعت صورة.", `<div class="two">${slid("الموضع الأفقي", "assets.avatar.focus.x", 0, 100, 1)}${slid("الموضع الرأسي", "assets.avatar.focus.y", 0, 100, 1)}</div>`)}
   <div class="we-card"><h3>وسائل التواصل</h3><p class="mu">تظهر في قسم التواصل بالرئيسية وفي صفحة Contact. لا تُعرض أي وسيلة بدون رابط صالح أو مخفية. روابط Facebook/Instagram/Behance يجب أن تكون https على الموقع الرسمي. لم أضف رابط Behance: أدخله بنفسك.</p>
-    <div class="we-soc">${SOCIALS.map(([k, n]) => { const l = g.links[k] || {}, ok = !!socialHref(k, l.url); return `<div class="we-soc-r"><span class="we-ic">${ICON[k]}</span><b>${n}</b><input data-p="links.${k}.url" dir="ltr" value="${esc(l.url || "")}" placeholder="${k === "email" ? "name@example.com" : k === "whatsapp" ? "https://wa.me/20… أو رقم" : k === "behance" ? "https://www.behance.net/username" : "https://…"}" aria-label="${n}"><label class="we-chk"><input type="checkbox" data-p="links.${k}.visible" ${l.visible === false ? "" : "checked"}> إظهار</label><span class="we-v ${ok ? "ok" : ""}" data-v="${k}">${!String(l.url || "").trim() ? "فارغ — لن يظهر" : ok ? "رابط صالح ✓" : "رابط غير صالح — لن يظهر"}</span></div>`; }).join("")}</div></div>`;
+    <div class="we-soc">${SOCIALS.map(([k, n]) => { const l = g.links[k] || {}, ok = !!socialHref(k, l.url); return `<div class="we-soc-r"><span class="we-ic">${ICON[k]}</span><b>${n}</b><input data-p="links.${k}.url" dir="ltr" value="${esc(l.url || "")}" placeholder="${k === "email" ? "name@example.com" : k === "whatsapp" ? "https://wa.me/20… أو رقم" : k === "behance" ? "https://www.behance.net/username" : "https://…"}" aria-label="${n}"><label class="we-chk"><input type="checkbox" data-p="links.${k}.visible" ${l.visible === false ? "" : "checked"}> إظهار</label><span class="we-v ${ok ? "good" : ""}" data-v="${k}">${!String(l.url || "").trim() ? "فارغ — لن يظهر" : ok ? "رابط صالح ✓" : "رابط غير صالح — لن يظهر"}</span></div>`; }).join("")}</div></div>`;
 }
 
 /* ---------- preview ---------- */
@@ -134,10 +134,11 @@ const stateText = () => dirty(S.key) ? "تعديلات غير محفوظة" : un
 function list() {
   const p = page();
   return `<div class="we-list"><div class="we-lh"><b>الأقسام</b><span class="mu">${p.sections.length}/${MAXSEC}</span></div>
-  ${p.sections.map((s, i) => `<div class="we-s ${S.sel === s.id ? "sel" : ""} ${s.hidden ? "off" : ""}" draggable="true" data-sid="${esc(s.id)}" data-i="${i}"><span class="we-grip" aria-hidden="true">⠿</span><button type="button" class="we-sn" data-act="select" data-sid="${esc(s.id)}"><b>${esc(secTitle(s))}</b><small class="mu">${TYPES[s.type]}${s.hidden ? " · مخفي" : ""}</small></button>
+  <div class="we-add"><select id="we-addt" aria-label="نوع القسم">${Object.entries(TYPES).filter(([k]) => k !== "core").map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select><button type="button" class="btn sm" data-act="add">+ إضافة قسم</button></div>
+  <div class="we-ss">  ${p.sections.map((s, i) => `<div class="we-s ${S.sel === s.id ? "sel" : ""} ${s.hidden ? "off" : ""}" draggable="true" data-sid="${esc(s.id)}" data-i="${i}"><span class="we-grip" aria-hidden="true">⠿</span><button type="button" class="we-sn" data-act="select" data-sid="${esc(s.id)}"><b>${esc(secTitle(s))}</b><small class="mu">${TYPES[s.type]}${s.hidden ? " · مخفي" : ""}</small></button>
     <div class="we-sb"><button type="button" class="btn gh sm" data-act="up" data-i="${i}" ${i ? "" : "disabled"} aria-label="أعلى">↑</button><button type="button" class="btn gh sm" data-act="dn" data-i="${i}" ${i < p.sections.length - 1 ? "" : "disabled"} aria-label="أسفل">↓</button>
     <button type="button" class="btn gh sm" data-act="hide" data-i="${i}" ${s.type === "core" ? "disabled" : ""}>${s.hidden ? "إظهار" : "إخفاء"}</button><button type="button" class="btn gh sm" data-act="dup" data-i="${i}" ${s.type === "core" ? "disabled" : ""}>تكرار</button><button type="button" class="btn gh sm dng" data-act="del" data-i="${i}" ${s.type === "core" ? "disabled" : ""}>حذف</button></div></div>`).join("")}
-  <div class="we-add"><select id="we-addt" aria-label="نوع القسم">${Object.entries(TYPES).filter(([k]) => k !== "core").map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select><button type="button" class="btn sm" data-act="add">+ إضافة قسم</button></div></div>`;
+  </div></div>`;
 }
 const secTitle = s => { const d = s.data || {}, t = d.title || (d.name); return (t && (t.ar || t.en)) || TYPES[s.type]; };
 function editor() {
@@ -259,7 +260,7 @@ function bind() {
     const tgt = S.key === "global" ? { o: page(), p } : (() => { const s = sec(S.sel); return s ? { o: s, p: secPath(p) } : null; })(); if (!tgt) return;
     let v = t.type === "checkbox" ? (t.dataset.inv ? !t.checked : t.checked) : t.dataset.num || t.type === "number" ? Number(t.value) : t.value;
     setp(tgt.o, tgt.p, v);
-    if (S.key === "global") { cropRefresh(); const m = p.match(/^links\.(\w+)\.url$/); if (m) { const el = root.querySelector(`[data-v="${m[1]}"]`), ok = !!socialHref(m[1], t.value); el.textContent = !t.value.trim() ? "فارغ — لن يظهر" : ok ? "رابط صالح ✓" : "رابط غير صالح — لن يظهر"; el.classList.toggle("ok", ok); } }
+    if (S.key === "global") { cropRefresh(); const m = p.match(/^links\.(\w+)\.url$/); if (m) { const el = root.querySelector(`[data-v="${m[1]}"]`), ok = !!socialHref(m[1], t.value); el.textContent = !t.value.trim() ? "فارغ — لن يظهر" : ok ? "رابط صالح ✓" : "رابط غير صالح — لن يظهر"; el.classList.toggle("good", ok); } }
     if (p.endsWith(".title.ar") || p.endsWith(".title.en") || p.endsWith(".name.ar")) { const row = root.querySelector(`.we-s[data-sid="${S.sel}"] .we-sn b`), s = sec(S.sel); if (row && s) row.textContent = secTitle(s); }
     redrawBar(); prevSoon();
   };
