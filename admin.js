@@ -64,7 +64,7 @@ app.addEventListener("click", async e => {
 const ST = { new: "طلب جديد", reviewing: "قيد المراجعة", in_progress: "قيد التنفيذ", completed: "مكتمل", rejected: "مرفوض" };
 const SV = { logo: "Logo Design", identity: "Visual Identity", graphic: "Graphic Design", web: "Website Development" };
 const dt = x => new Date(x).toLocaleString("ar-EG");
-document.querySelector("#tabs").onclick = async e => { const t = e.target.dataset.t; if (!t || !await Builder.canLeave()) return; if (t === "p") listView(); if (t === "r") reqList(); };
+document.querySelector("#tabs").onclick = async e => { const t = e.target.dataset.t; if (!t || !await Builder.canLeave() || !await SiteEditor.canLeave()) return; SiteEditor.close(); if (t === "p") listView(); if (t === "r") reqList(); if (t === "w") SiteEditor.open(bctx); };
 let reqs = [];
 async function reqList(note = "") {
   const { data, error } = await sb.from("project_requests").select("*, profiles(full_name,email), request_attachments(file_name,file_path)").order("created_at", { ascending: false });

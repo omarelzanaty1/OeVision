@@ -380,5 +380,12 @@ function preview() {
   document.addEventListener("keydown", key); draw();
 }
 
-window.Builder = { open, restoreCurrent, canLeave, urlsOf, pathOf, BUCKET };
+/* Reused by the Website Editor: same optimizer + same admin-only bucket, under the "site/" prefix (no storage policy change). */
+async function uploadPrepared(c, p) {
+  const ext = { "image/webp": "webp", "image/png": "png", "image/gif": "gif" }[p.file.type] || "jpg", path = `site/${uid()}.${ext}`;
+  const { error } = await c.sb.storage.from(BUCKET).upload(path, p.file, { contentType: p.file.type, upsert: false, cacheControl: "31536000" });
+  if (error) throw error;
+  return { url: c.sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl, w: p.w, h: p.h, path };
+}
+window.Builder = { open, restoreCurrent, canLeave, urlsOf, pathOf, BUCKET, prepare, uploadPrepared };
 })();
