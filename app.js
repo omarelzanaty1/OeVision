@@ -16,22 +16,7 @@ const L = (a, e) => (lang === "ar" ? a : e);
 const P = o => (o && (o[lang] || o.en || o.ar)) || "";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-const ICON = {
-  facebook: '<svg viewBox="0 0 24 24" fill="#1877f2"><path d="M14 8h3V4h-3a4 4 0 0 0-4 4v2H7v4h3v8h4v-8h3l1-4h-4V8z"/></svg>',
-  instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="#e4405f" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#e4405f"/></svg>',
-  whatsapp: '<svg viewBox="0 0 24 24" fill="none" stroke="#25d366" stroke-width="2"><path d="M3 21l1.6-4.7A8.5 8.5 0 1 1 8 19.5L3 21z"/><path fill="#25d366" stroke="none" d="M9 8.5c.4 2.6 2.4 4.8 5.2 5.5l1.3-1.3-2-1-.8.8c-.8-.4-1.6-1.2-2-2l.8-.8-1-2L9 8.5z"/></svg>',
-  behance: '<svg viewBox="0 0 24 24"><text x="12" y="17" text-anchor="middle" font-size="14" font-weight="800" fill="#1769ff" font-family="Outfit,sans-serif">Bē</text></svg>',
-  email: '<svg viewBox="0 0 24 24" fill="none" stroke="#f79321" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/></svg>'
-};
-
-/* Lucide icon paths (inline, stroke 1.75) */
-const LI = (p, c = "") => `<svg class="li ${c}" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
-const ICN = {
-  up: LI('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>', "flip"),
-  folder: LI('<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>'),
-  pin: LI('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>'),
-  alert: LI('<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>')
-};
+const { ICN, ICON } = SEC;   /* icons + page renderer live in sections.js */
 
 /* ---------- Project Brief config ---------- */
 const q = (id, type, req, ar, en, opts) => ({ id, type, req, ar, en, opts });
@@ -83,61 +68,56 @@ function projBody(list, max, uni) {
     else body = `<div class="grid wk${uni ? " uni" : ""}">${(max ? list.slice(0, max) : list).map((p, i) => `<article class="card pc"><a class="pc-a" href="#/work/${esc(p.slug || p.id)}"><span class="no">${String(i + 1).padStart(2, "0")}</span><div class="cv">${p.cover ? `<img loading="lazy" decoding="async" src="${esc(p.cover)}" style="${PV.coverStyle(p.focus)}" alt="${esc(P(p.title))}">` : ""}</div></a><div class="p"><small class="lbl">${cn(p.category)}</small><b>${esc(P(p.title))}</b><p class="mu pc-d">${esc(P(p.description))}</p><a class="btn gh sm" href="#/work/${esc(p.slug || p.id)}">${L("عرض التفاصيل", "View details")} ${ICN.up}</a></div></article>`).join("")}</div>`;
   return body;
 }
-const views = {
-  home() {
-    const sec = (id, num, a, e, inner) => `<section class="hs" id="${id}"><div class="wrap"><div class="hs-h"><span class="lbl">${num}</span><h2>${L(a, e)}</h2></div>${inner}</div></section>`;
-    const soon = (a, e) => `<div class="empty">${ICN.folder}<b>${L(a, e)}</b></div>`;
-    const skills = S.skills.length ? `<div class="chips big">${S.skills.map(x => `<span class="chip">${esc(P(x))}</span>`).join("")}</div>` : soon("سيتم إضافة المهارات والأدوات قريبًا.", "Skills & tools will be added soon.");
-    const tl = (arr, empty) => arr.length ? `<ol class="tl">${arr.map(x => `<li><b>${esc(P(x.title))}</b><span class="mu">${esc(P(x.org))}${x.period ? " · " + esc(x.period) : ""}</span>${x.desc ? `<p class="mu">${esc(P(x.desc))}</p>` : ""}</li>`).join("")}</ol>` : empty;
-    const exp = `<div class="two-c"><div><h3>${L("الخبرات", "Experience")}</h3>${tl(S.experience || [], soon("سيتم إضافة الخبرات قريبًا.", "Experience will be added soon."))}</div><div><h3>${L("التعليم", "Education")}</h3>${tl(S.education || [], soon("سيتم إضافة التعليم قريبًا.", "Education will be added soon."))}</div></div>`;
-    const svc = `<div class="svc">${Object.keys(SERVICES).map((k, i) => `<a class="svc-i" href="#/brief"><span class="lbl">${String(i + 1).padStart(2, "0")}</span><b>${P(SERVICES[k])}</b>${ICN.up}</a>`).join("")}</div>`;
-    const l = S.links, items = [["facebook", "Facebook", l.facebook], ["instagram", "Instagram", l.instagram], ["whatsapp", "WhatsApp", l.whatsapp], ["behance", "Behance", l.behance], ["email", "Email", l.email && "mailto:" + l.email]].filter(x => x[2]);
-    const contact = `<div class="soc">${items.map(([k, n, h]) => `<a href="${esc(h)}" ${k === "email" ? "" : 'target="_blank" rel="noopener"'}>${ICON[k]}<span>${n}</span></a>`).join("")}</div><div class="row" style="margin-top:0"><a class="btn or" href="#/contact">${L("أرسل رسالة", "Send a message")}</a><a class="btn gh" href="#/brief">Project Brief</a></div>`;
-    return `<section class="pf" id="top"><div class="cover"><img src="assets/banner.png" alt="Omar Elzanaty — Visual Identity Designer &amp; Web Developer" width="2080" height="696" fetchpriority="high" decoding="async"></div>
-    <div class="wrap pf-b"><div class="avatar"><img src="assets/logo.svg" alt="O.E." width="200" height="200"></div>
-    <div class="pf-t"><div><h1>Omar Elzanaty</h1><p class="hl" dir="ltr">Visual Identity Designer &amp; Web Developer</p><p class="loc mu">${ICN.pin}<span dir="ltr">Egypt</span></p></div>
-    <div class="row"><a class="btn or" href="#/work">${L("أعمالي", "My Work")}</a><a class="btn gh" href="#/brief">Project Brief</a></div></div></div></section>
-    <section class="hs" id="about"><div class="wrap"><div class="hs-h"><span class="lbl">01</span><h2>${L("نبذة عني", "About Me")}</h2></div><div class="about-r"><p class="lead">${L("أنا عمر الزناتي، مصمم هويات بصرية ومطور مواقع إلكترونية من مصر. أعمل على تحويل الأفكار إلى هويات بصرية مميزة وتجارب رقمية احترافية، من خلال الجمع بين الإبداع والتصميم والتكنولوجيا.", "I'm Omar Elzanaty, a visual identity designer and web developer from Egypt. I turn ideas into distinctive visual identities and professional digital experiences by combining creativity, design and technology.")}</p>
-    <p class="mu">${L("هدفي هو مساعدة العلامات التجارية والأفراد على بناء حضور قوي ومميز، سواء من خلال تصميم هوية بصرية متكاملة أو تطوير موقع إلكتروني يعكس قيمة المشروع ويحقق أهدافه.", "My goal is to help brands and individuals build a strong, memorable presence, whether through a complete visual identity or a website that reflects the value of the project and achieves its goals.")}</p></div></div></section>
-    ${sec("skills", "02", "المهارات والأدوات", "Skills & Tools", skills)}
-    ${sec("selected-work", "03", "أعمال مختارة", "Selected Work", projBody(PROJ, 6, true) + (PSTATE === "ready" && PROJ.length ? `<div class="row"><a class="btn gh" href="#/work">${L("عرض كل الأعمال", "View all work")} ${ICN.up}</a></div>` : ""))}
-    ${sec("experience", "04", "الخبرات والتعليم", "Experience & Education", exp)}
-    ${sec("services", "05", "الخدمات", "Services", svc)}
-    ${sec("contact", "06", "تواصل معي", "Contact", contact)}`;
-  },
-  work(cat = "all") {
+
+/* ---------- Editable pages (published content from site_content_published, else built-in defaults) ---------- */
+let SC = {};
+const G = () => SEC.normalize("global", SC.global, S);
+function loadSite() {
+  if (!sb) return Promise.resolve();
+  return Promise.resolve(sb.from("site_content_published").select("key,content")).then(r => { if (r && !r.error && Array.isArray(r.data)) r.data.forEach(x => { SC[x.key] = x.content; }); }).catch(() => {});
+}
+const pctx = cat => ({ L, P, projectsReady: () => PSTATE === "ready", projectList: c => PROJ.filter(p => !c || c === "all" || p.category === c), projects: (list, max, uni) => projBody(list, max, uni),
+  core: (name, d) => name === "work" ? workCore(cat || "all", d) : name === "brief" ? briefFlow(d) : contactCore(d) });
+function page(key, cat) { return SEC.render(key, SEC.normalize(key, SC[key], S), G(), pctx(cat)); }
+function workCore(cat, d) {
     const list = PROJ.filter(p => cat === "all" || p.category === cat);
     const tab = (k, a, e) => `<button class="${cat === k ? "on" : ""}" data-cat="${k}">${L(a, e)}</button>`;
     const body = projBody(list);
-    return `<div class="wrap"><h2>${L("الأعمال", "Work")}</h2><div class="tabs">${tab("all", "الكل", "All")}${tab("graphic", "Graphic Design", "Graphic Design")}${tab("web", "Website Development", "Website Development")}</div>${body}</div>`;
-  },
-  project(id) {
-    if (PSTATE === "loading" || PSTATE === "idle") return `<div class="wrap"><div class="empty">…</div></div>`;
-    const p = PROJ.find(x => x.slug === id || x.id === id);
-    if (!p) return `<div class="wrap"><div class="empty">${L("المشروع غير موجود.", "Project not found.")}</div><div class="row" style="justify-content:center"><a class="btn gh" href="#/work">← ${L("العودة لمعرض الأعمال", "Back to Work")}</a></div></div>`;
-    return PV.render(p, { L, P, backHref: "#/work" });
-  },
-  brief() {
+    return `<div class="wrap"><h2>${esc(P(d.title) || L("الأعمال", "Work"))}</h2>${P(d.desc) ? `<p class="mu" style="margin:-8px 0 20px">${esc(P(d.desc))}</p>` : ""}<div class="tabs">${tab("all", "الكل", "All")}${tab("graphic", "Graphic Design", "Graphic Design")}${tab("web", "Website Development", "Website Development")}</div>${body}</div>`;
+  }
+function briefFlow(d) {
     const steps = `<div class="steps">${[0, 1, 2].map(i => `<i class="${i <= B.step ? "on" : ""}"></i>`).join("")}</div>`;
-    if (B.step === 0) return `<div class="wrap"><h2>Project Brief</h2>${steps}<p class="mu" style="margin-bottom:20px">${L("اختر نوع الخدمة لنبدأ. سيُطلب منك تسجيل الدخول لإرسال الطلب.", "Choose a service to begin. You'll be asked to sign in to submit your request.")}</p><div class="grid">${Object.entries(SERVICES).map(([k, s]) => `<button class="card" data-svc="${k}" style="padding:28px;font:inherit;color:inherit;text-align:start;cursor:pointer"><b style="font-size:20px">${P(s)}</b></button>`).join("")}</div></div>`;
+    if (B.step === 0) return `<div class="wrap"><h2>${esc(P(d.title) || "Project Brief")}</h2>${P(d.desc) ? `<p class="mu" style="margin:-8px 0 16px">${esc(P(d.desc))}</p>` : ""}${steps}<p class="mu" style="margin-bottom:20px">${L("اختر نوع الخدمة لنبدأ. سيُطلب منك تسجيل الدخول لإرسال الطلب.", "Choose a service to begin. You'll be asked to sign in to submit your request.")}</p><div class="grid">${Object.entries(SERVICES).map(([k, s]) => `<button class="card" data-svc="${k}" style="padding:28px;font:inherit;color:inherit;text-align:start;cursor:pointer"><b style="font-size:20px">${P(s)}</b></button>`).join("")}</div></div>`;
     if (B.step === 3) return `<div class="wrap"><div class="panel" style="text-align:center;max-width:560px;margin:auto;padding:40px 24px"><div class="ok">✓</div><h2>${L("تم استلام طلبك بنجاح", "Your request was received")}</h2><p class="mu">${L("شكرًا لك! سأراجع تفاصيل مشروعك وأتواصل معك قريبًا. يمكنك متابعة حالة الطلب من حسابك.", "Thank you! I'll review your project details and get back to you soon. You can follow the request status in your account.")}</p>${B.warn ? `<p class="err">${esc(B.warn)}</p>` : ""}<div class="row" style="justify-content:center"><a class="btn" href="#/account">${L("طلباتي", "My requests")}</a><a class="btn gh" href="#/home">${L("الرئيسية", "Home")}</a></div></div></div>`;
     const svc = SERVICES[B.svc];
     if (B.step === 1) return `<div class="wrap"><h2>${P(svc)}</h2>${steps}<form id="bf" novalidate>${svc.qs.map(f => field(f)).join("")}${B.err ? `<div class="err">${B.err}</div>` : ""}<div class="row"><button type="button" class="btn gh" data-act="back">${L("رجوع", "Back")}</button><button class="btn">${L("مراجعة الطلب", "Review")}</button></div></form></div>`;
     const sum = svc.qs.map(f => `<dt>${P(f)}</dt><dd>${esc(B.ans[f.id] || "—")}</dd>`).join("");
     return `<div class="wrap"><h2>${L("مراجعة الطلب", "Review your request")}</h2>${steps}<div class="panel"><dl><dt>${L("الخدمة", "Service")}</dt><dd>${P(svc)}</dd>${sum}</dl>
     ${B.err ? `<div class="err">${esc(B.err)}</div>` : ""}<div class="row"><button class="btn gh" data-act="edit">${L("تعديل", "Edit")}</button><button class="btn" data-act="submit">${L("إرسال الطلب", "Submit request")}</button><a class="btn or" target="_blank" rel="noopener" href="${S.links.whatsapp}?text=${encodeURIComponent(waText(svc))}">${L("إرسال الملخص عبر WhatsApp", "Send summary via WhatsApp")}</a></div></div></div>`;
+  }
+function contactCore(d) {
+    const items = SEC.socialLinks(G());
+    return `<div class="wrap"><h2>${esc(P(d.title) || L("تواصل معي", "Contact"))}</h2>${P(d.desc) ? `<p class="mu" style="margin:-8px 0 20px">${esc(P(d.desc))}</p>` : ""}${SEC.socHtml(items)}
+    <form id="cf"><label>${L("الاسم", "Name")} <span class="req">*</span><input name="n" required></label><label>${L("البريد الإلكتروني", "Email")} <span class="req">*</span><input name="e" type="email" required></label><label>${L("موضوع الرسالة", "Subject")}<input name="s"></label><label>${L("تفاصيل الطلب", "Details")} <span class="req">*</span><textarea name="d" required></textarea></label><div id="cm" class="mu" role="status"></div><div><button class="btn">${L("إرسال", "Send")}</button></div></form></div>`;
+  }
+
+const views = {
+  home() { return page("home"); },
+  work(cat = "all") { return page("work", cat); },
+  project(id) {
+    if (PSTATE === "loading" || PSTATE === "idle") return `<div class="wrap"><div class="empty">…</div></div>`;
+    const p = PROJ.find(x => x.slug === id || x.id === id);
+    if (!p) return `<div class="wrap"><div class="empty">${L("المشروع غير موجود.", "Project not found.")}</div><div class="row" style="justify-content:center"><a class="btn gh" href="#/work">← ${L("العودة لمعرض الأعمال", "Back to Work")}</a></div></div>`;
+    return PV.render(p, { L, P, backHref: "#/work" });
   },
+  brief() { return B.step === 0 ? page("brief") : briefFlow({}); },
   account() {
     if (!ACC) return `<div class="wrap"><div class="empty">…</div></div>`;
     const pr = ACC.profile || {}, d = x => new Date(x).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB");
     const reqs = ACC.reqs.length ? ACC.reqs.map(r => `<details class="panel" style="margin-bottom:12px"><summary style="cursor:pointer;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>${esc(SERVICES[r.service_type] ? P(SERVICES[r.service_type]) : r.service_type)}</b><span class="mu">${d(r.created_at)}</span><span class="stb ${r.status}">${P(STAT[r.status])}</span></summary><dl style="margin-top:14px">${(r.brief_answers || []).map(a => `<dt>${esc(P(a.q))}</dt><dd>${esc(a.a)}</dd>`).join("")}${(r.request_attachments || []).length ? `<dt>${L("الملفات المرفقة", "Attachments")}</dt><dd>${r.request_attachments.map(f => esc(f.file_name)).join("، ")}</dd>` : ""}</dl></details>`).join("") : `<div class="empty">${L("لا توجد طلبات بعد.", "No requests yet.")}</div>`;
     return `<div class="wrap"><h2>${L("حسابي", "My Account")}</h2><form id="af" style="margin-bottom:32px"><div class="row" style="margin:0;align-items:center">${pr.avatar_url ? `<img src="${esc(pr.avatar_url)}" alt="" width="64" height="64" style="border-radius:50%" referrerpolicy="no-referrer">` : ""}<div><b>${esc(pr.email || USER.email)}</b><div class="mu" style="font-size:13px">${L("تاريخ التسجيل", "Member since")}: ${d(pr.created_at || USER.created_at)}</div></div></div><label>${L("الاسم", "Name")}<input name="n" value="${esc(pr.full_name)}"></label><div class="row" style="margin:0"><button class="btn">${L("حفظ", "Save")}</button><button type="button" class="btn gh" data-act="logout">${L("تسجيل الخروج", "Log out")}</button></div><div id="am" class="mu"></div></form><h2 id="reqs">${L("طلباتي", "My requests")}</h2>${reqs}</div>`;
   },
-  contact() {
-    const l = S.links, items = [["facebook", "Facebook", l.facebook], ["instagram", "Instagram", l.instagram], ["whatsapp", "WhatsApp", l.whatsapp], ["behance", "Behance", l.behance], ["email", "Email", l.email && "mailto:" + l.email]].filter(x => x[2]);
-    return `<div class="wrap"><h2>${L("تواصل معي", "Contact")}</h2><div class="soc">${items.map(([k, n, h]) => `<a href="${esc(h)}" ${k === "email" ? "" : 'target="_blank" rel="noopener"'}>${ICON[k]}<span>${n}</span></a>`).join("")}</div>
-    <form id="cf"><label>${L("الاسم", "Name")} <span class="req">*</span><input name="n" required></label><label>${L("البريد الإلكتروني", "Email")} <span class="req">*</span><input name="e" type="email" required></label><label>${L("موضوع الرسالة", "Subject")}<input name="s"></label><label>${L("تفاصيل الطلب", "Details")} <span class="req">*</span><textarea name="d" required></textarea></label><div id="cm" class="mu" role="status"></div><div><button class="btn">${L("إرسال", "Send")}</button></div></form></div>`;
-  }
+  contact() { return page("contact"); }
 };
 function field(f) {
   const v = B.ans[f.id] || "", lab = `${P(f)} ${f.req ? '<span class="req">*</span>' : `<small>(${L("اختياري", "optional")})</small>`}`;
@@ -165,7 +145,9 @@ async function checkAdmin() {
   if (USER && sb) { const { data, error } = await sb.rpc("is_admin"); ISADMIN = !error && data === true; }
   drawMenu();
 }
+let SITE_READY = false;
 function render() {
+  if (!SITE_READY) return;
   const h = (location.hash || "#/home").slice(2).split("/"), r = h[0] || "home";
   document.documentElement.lang = lang; document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   $("#lang").textContent = lang === "ar" ? "EN" : "AR";
@@ -287,5 +269,6 @@ sideEl.addEventListener("click", e => { if (e.target.closest("a,[data-act=logout
 document.addEventListener("keydown", e => { if (e.key === "Escape" && sideEl.classList.contains("open")) setSide(false); });
 window.addEventListener("hashchange", () => { setSide(false); render(); });
 $("#yr").textContent = new Date().getFullYear();
+Promise.race([loadSite(), new Promise(r => setTimeout(r, 2500))]).then(() => { SITE_READY = true; render(); });
 if (sb) { let first = true, prev = null; sb.auth.onAuthStateChange((ev, session) => { const id = session?.user?.id || null; if (!first && id === prev) return; first = false; prev = id; USER = session?.user || null; if (USER) applyPending(); render(); checkAdmin(); }); } else render();
 })();
