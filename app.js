@@ -55,7 +55,7 @@ const SERVICES = {
     q("deadline", "text", 0, "الموعد المطلوب", "Deadline")] }
 };
 const STAT = { new: ["طلب جديد", "New Request"], reviewing: ["قيد المراجعة", "Reviewing"], in_progress: ["قيد التنفيذ", "In Progress"], completed: ["مكتمل", "Completed"], rejected: ["مرفوض", "Rejected"] };
-let USER = null, ACC = null, ISADMIN = false; const sb = window.sb; const BUCKET = "client-attachments";
+let USER = null, ACC = null, ISADMIN = false, RECOVERY = false; const sb = window.sb; const BUCKET = "client-attachments";
 let B = { svc: null, step: 0, ans: {}, files: {}, err: "" };
 
 /* ---------- Views ---------- */
@@ -197,8 +197,10 @@ async function sendContact(form) {
   if (error) return show(L("تعذّر إرسال الرسالة. حاول مرة أخرى.", "Could not send your message. Please try again."), 1);
   form.reset(); show(L("تم إرسال رسالتك. شكرًا لك!", "Your message was sent. Thank you!"));
 }
-const base = () => location.origin + location.pathname;
-function applyPending() { let p = null; try { p = sessionStorage.getItem("pend"); sessionStorage.removeItem("pend"); } catch (e) {} if (location.search.includes("code=")) history.replaceState(null, "", base() + location.hash); if (p && SERVICES[p]) { B = { svc: p, step: 1, ans: {}, files: {}, err: "" }; location.hash = "#/brief"; } }
+/* One canonical, allow-listed return URL for every auth redirect (Google, signup confirmation, password recovery). Never derived from the page's own URL. */
+const AUTH_URL = (() => { try { const u = new URL(String(window.SITE_URL || "").trim()); return u.protocol === "https:" && !u.username && !u.password ? u.href : ""; } catch (e) { return ""; } })();
+const MINPW = 10, noSite = () => `<div class="err">${L("خدمة الحسابات غير مهيأة بعد.", "Accounts are not configured yet.")}</div>`;
+function applyPending() { let p = null; try { p = sessionStorage.getItem("pend"); sessionStorage.removeItem("pend"); } catch (e) {} if (location.search.includes("code=")) history.replaceState(null, "", location.pathname + location.hash); if (p && SERVICES[p]) { B = { svc: p, step: 1, ans: {}, files: {}, err: "" }; location.hash = "#/brief"; } }
 async function loadAccount() {
   const [pr, rq] = await Promise.all([sb.from("profiles").select("*").eq("id", USER.id).maybeSingle(), sb.from("project_requests").select("*, request_attachments(file_name)").eq("user_id", USER.id).order("created_at", { ascending: false })]);
   ACC = { profile: pr.data, reqs: rq.data || [] };
@@ -209,23 +211,58 @@ function openAuth(svc) {
   document.querySelector("#ov")?.remove(); let mode = "in";
   const ov = document.createElement("div"); ov.className = "ov"; ov.id = "ov"; document.body.appendChild(ov);
   const draw = (msg = "") => {
-    ov.innerHTML = `<div class="md" role="dialog"><button class="x" data-x aria-label="close">✕</button><h2>${mode === "in" ? L("تسجيل الدخول", "Sign in") : L("إنشاء حساب", "Create account")}</h2><p class="mu" style="font-size:14px">${L("سجّل الدخول لإرسال طلبك ومتابعته.", "Sign in to submit and track your request.")}</p>
-    <button class="btn gh gbtn" data-g><b style="color:#4285f4">G</b> ${L("المتابعة باستخدام Google", "Continue with Google")}</button><div class="sep">${L("أو بالبريد الإلكتروني", "or with email")}</div>
-    <form id="ef" style="padding:0;border:0;background:none">${mode === "up" ? `<label>${L("الاسم", "Name")}<input name="n" autocomplete="name"></label>` : ""}<label>${L("البريد الإلكتروني", "Email")}<input name="e" type="email" required autocomplete="email"></label><label>${L("كلمة المرور", "Password")}<input name="p" type="password" required minlength="6" autocomplete="${mode === "in" ? "current-password" : "new-password"}"></label>${msg}<button class="btn">${L("المتابعة", "Continue")}</button></form>
-    <button class="btn gh" data-m style="border:0">${mode === "in" ? L("ليس لديك حساب؟ أنشئ حسابًا", "No account? Create one") : L("لديك حساب؟ سجّل الدخول", "Have an account? Sign in")}</button></div>`;
+    const rs = mode === "reset", up = mode === "up";
+    ov.innerHTML = `<div class="md" role="dialog"><button class="x" data-x aria-label="close">✕</button><h2>${rs ? L("استعادة كلمة المرور", "Reset password") : up ? L("إنشاء حساب", "Create account") : L("تسجيل الدخول", "Sign in")}</h2><p class="mu" style="font-size:14px">${rs ? L("أدخل بريدك وسنرسل لك رابطًا لتعيين كلمة مرور جديدة.", "Enter your email and we will send you a link to set a new password.") : L("سجّل الدخول لإرسال طلبك ومتابعته.", "Sign in to submit and track your request.")}</p>
+    ${rs ? "" : `<button class="btn gh gbtn" data-g><b style="color:#4285f4">G</b> ${L("المتابعة باستخدام Google", "Continue with Google")}</button><div class="sep">${L("أو بالبريد الإلكتروني", "or with email")}</div>`}
+    <form id="ef" style="padding:0;border:0;background:none">${up ? `<label>${L("الاسم", "Name")}<input name="n" autocomplete="name"></label>` : ""}<label>${L("البريد الإلكتروني", "Email")}<input name="e" type="email" required autocomplete="email"></label>${rs ? "" : `<label>${L("كلمة المرور", "Password")}<input name="p" type="password" required ${up ? `minlength="${MINPW}"` : ""} autocomplete="${up ? "new-password" : "current-password"}">${up ? `<span class="mu" style="font-size:12px">${L("10 أحرف على الأقل.", "At least 10 characters.")}</span>` : ""}</label>`}${msg}<button class="btn">${rs ? L("إرسال رابط الاستعادة", "Send reset link") : L("المتابعة", "Continue")}</button></form>
+    ${mode === "in" ? `<button class="btn gh" data-f style="border:0">${L("نسيت كلمة المرور؟", "Forgot password?")}</button>` : ""}
+    <button class="btn gh" data-m style="border:0">${rs ? L("العودة لتسجيل الدخول", "Back to sign in") : mode === "in" ? L("ليس لديك حساب؟ أنشئ حسابًا", "No account? Create one") : L("لديك حساب؟ سجّل الدخول", "Have an account? Sign in")}</button></div>`;
   };
-  draw(sb ? "" : `<div class="err">${L("خدمة الحسابات غير مهيأة بعد.", "Accounts are not configured yet.")}</div>`);
+  draw(sb && AUTH_URL ? "" : noSite());
   ov.onclick = async e => {
     if (e.target === ov || e.target.closest("[data-x]")) ov.remove();
     if (e.target.closest("[data-m]")) { mode = mode === "in" ? "up" : "in"; draw(); }
-    if (e.target.closest("[data-g]") && sb) { const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: base() } }); if (error) draw(`<div class="err">${esc(error.message)}</div>`); }
+    if (e.target.closest("[data-f]")) { mode = "reset"; draw(); }
+    if (e.target.closest("[data-g]") && sb) { if (!AUTH_URL) return draw(noSite()); const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: AUTH_URL } }); if (error) draw(`<div class="err">${esc(error.message)}</div>`); }
   };
   ov.onsubmit = async e => {
-    e.preventDefault(); if (!sb) return; const f = new FormData(e.target), em = f.get("e"), pw = f.get("p");
+    e.preventDefault(); if (!sb) return; if (!AUTH_URL) return draw(noSite()); const f = new FormData(e.target), em = String(f.get("e") || "").trim(), pw = f.get("p");
+    if (mode === "reset") {
+      const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: AUTH_URL });
+      return error ? draw(`<div class="err">${L("تعذّر إرسال الرابط الآن. حاول لاحقًا.", "Could not send the link right now. Please try again later.")}</div>`)
+        : draw(`<div class="mu">${L("إن كان هذا البريد مسجّلًا لدينا فسيصلك رابط لتعيين كلمة مرور جديدة. افتح الرابط من نفس المتصفح.", "If this email is registered, you will receive a link to set a new password. Open it in the same browser.")}</div>`);
+    }
     if (mode === "in") { const { error } = await sb.auth.signInWithPassword({ email: em, password: pw }); return error ? draw(`<div class="err">${L("بيانات الدخول غير صحيحة.", "Incorrect email or password.")}</div>`) : ov.remove(); }
-    const { data, error } = await sb.auth.signUp({ email: em, password: pw, options: { data: { full_name: f.get("n") || "" }, emailRedirectTo: base() } });
+    if (String(pw || "").length < MINPW) return draw(`<div class="err">${L("كلمة المرور يجب ألا تقل عن 10 أحرف.", "Password must be at least 10 characters.")}</div>`);
+    const { data, error } = await sb.auth.signUp({ email: em, password: pw, options: { data: { full_name: f.get("n") || "" }, emailRedirectTo: AUTH_URL } });
     if (error) return draw(`<div class="err">${esc(error.message)}</div>`);
     data.session ? ov.remove() : draw(`<div class="mu">${L("أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.", "We sent a confirmation link to your email. Open it to finish signing up.")}</div>`);
+  };
+}
+/* ---------- Password recovery (public clients only). The recovery link signs the user in; this screen sets the new password. ---------- */
+async function openRecovery() {
+  document.querySelector("#ov")?.remove();
+  const ov = document.createElement("div"); ov.className = "ov"; ov.id = "ov"; document.body.appendChild(ov);
+  const draw = (body, msg = "") => { ov.innerHTML = `<div class="md" role="dialog"><button class="x" data-x aria-label="close">✕</button><h2>${L("كلمة مرور جديدة", "New password")}</h2>${body}${msg}</div>`; };
+  const blocked = txt => { draw(`<p class="mu" style="font-size:14px">${txt}</p><button class="btn" data-x>${L("حسنًا", "OK")}</button>`); sb.auth.signOut(); };
+  draw(`<p class="mu">${L("جارٍ التحقق…", "Verifying…")}</p>`);
+  ov.onclick = e => { if (e.target.closest("[data-x]")) ov.remove(); };
+  /* Admin accounts sign in with Google only: never let this screen set a password on one (client-side guard; the real control is Supabase/MFA). */
+  const { data, error } = await sb.rpc("is_admin");
+  if (error) return blocked(L("تعذّر التحقق من الحساب. حاول مرة أخرى.", "Could not verify the account. Please try again."));
+  if (data === true) return blocked(L("هذا الحساب يسجّل الدخول عبر Google فقط، ولا يمكن تعيين كلمة مرور له من هنا.", "This account signs in with Google only; a password cannot be set here."));
+  const form = (msg = "") => draw(`<form id="rf" style="padding:0;border:0;background:none"><label>${L("كلمة المرور الجديدة", "New password")}<input name="p" type="password" required minlength="${MINPW}" autocomplete="new-password"><span class="mu" style="font-size:12px">${L("10 أحرف على الأقل.", "At least 10 characters.")}</span></label><label>${L("تأكيد كلمة المرور", "Confirm password")}<input name="c" type="password" required minlength="${MINPW}" autocomplete="new-password"></label>${msg}<button class="btn">${L("تحديث كلمة المرور", "Update password")}</button></form>`);
+  form();
+  ov.onclick = async e => { if (e.target.closest("[data-x]")) { ov.remove(); if (RECOVERY) { RECOVERY = false; await sb.auth.signOut(); } } };
+  ov.onsubmit = async e => {
+    e.preventDefault(); const f = new FormData(e.target), pw = String(f.get("p") || ""), c = String(f.get("c") || "");
+    if (pw.length < MINPW) return form(`<div class="err">${L("كلمة المرور يجب ألا تقل عن 10 أحرف.", "Password must be at least 10 characters.")}</div>`);
+    if (pw !== c) return form(`<div class="err">${L("كلمتا المرور غير متطابقتين.", "The passwords do not match.")}</div>`);
+    const { error: ue } = await sb.auth.updateUser({ password: pw });
+    if (ue) return form(`<div class="err">${esc(ue.message)}</div>`);
+    RECOVERY = false; await sb.auth.signOut();   /* end the recovery session (and others): sign in again with the new password */
+    draw(`<p class="mu">${L("تم تحديث كلمة المرور. سجّل الدخول بها الآن.", "Password updated. Sign in with it now.")}</p><button class="btn" data-si>${L("تسجيل الدخول", "Sign in")}</button>`);
+    ov.onclick = e2 => { if (e2.target.closest("[data-si]")) openAuth(); else if (e2.target.closest("[data-x]")) ov.remove(); };
   };
 }
 async function submitBrief(btn) {
@@ -270,5 +307,5 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && sideEl.cla
 window.addEventListener("hashchange", () => { setSide(false); render(); });
 $("#yr").textContent = new Date().getFullYear();
 Promise.race([loadSite(), new Promise(r => setTimeout(r, 2500))]).then(() => { SITE_READY = true; render(); });
-if (sb) { let first = true, prev = null; sb.auth.onAuthStateChange((ev, session) => { const id = session?.user?.id || null; if (!first && id === prev) return; first = false; prev = id; USER = session?.user || null; if (USER) applyPending(); render(); checkAdmin(); }); } else render();
+if (sb) { let first = true, prev = null; sb.auth.onAuthStateChange((ev, session) => { if (ev === "PASSWORD_RECOVERY") { RECOVERY = true; USER = session?.user || null; setTimeout(openRecovery, 0); return; } const id = session?.user?.id || null; if (!first && id === prev) return; first = false; prev = id; USER = session?.user || null; if (USER) applyPending(); render(); checkAdmin(); }); } else render();
 })();
